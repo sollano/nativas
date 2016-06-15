@@ -1,0 +1,30 @@
+source("diversidade.R")
+source("pareadoSimilaridade.R")
+source("matrizSimilaridade.R")
+source("estrutura.R")
+source("BDq.R")
+source("agregacao.R")
+
+inv = read.csv("cauaxi 2012.csv")
+head(estrutura(inv, "scientific.name", "DBH", "transect", 0.1, "canopy", "light"))
+diversidade(inv, "scientific.name", indice = "H")
+diversidade(inv, "scientific.name", indice = "S")
+diversidade(inv, "scientific.name", indice = "Hmax")
+diversidade(inv, "scientific.name", indice = "J")
+diversidade(inv, "scientific.name")
+p.similaridade(inv[inv$transect == "T01","scientific.name"], inv[inv$transect == "T02","scientific.name"])
+m.similaridade(inv, "scientific.name", "transect")
+bdq.meyer(inv, "transect", "DBH", 0.1)[1]
+agregacao(inv, "scientific.name", "transect")
+
+inv = read.csv("ducke.csv")
+estrutura(inv, "scientific_name", "DBH_11", "transect", 0.1, "canopy_11", "light_11")
+diversidade(inv, "scientific_name", indice = "H")
+diversidade(inv, "scientific_name", indice = "S")
+diversidade(inv, "scientific_name", indice = "Hmax")
+diversidade(inv, "scientific_name", indice = "J")
+diversidade(inv, "scientific_name")
+m.similaridade(inv, "scientific_name", "transect")
+bdq.meyer(inv, "transect", "DBH_11", 0.1)[1]
+agregacao(inv, "scientific_name", "transect")
+
