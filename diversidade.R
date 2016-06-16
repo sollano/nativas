@@ -1,5 +1,8 @@
 diversidade = function(data, col.especies, rotulo.NI = "NI", indice = NA){
   
+  # Remover NA
+  data = data[!is.na(data[col.especies]),]
+
   # Remover NI
   semNI = data[data[,col.especies]!=rotulo.NI, col.especies]
   
@@ -9,7 +12,8 @@ diversidade = function(data, col.especies, rotulo.NI = "NI", indice = NA){
   names(tableP) = c("especie", "freq")
   
   # Calcula número de indivíduos na amostra
-  N = length(semNI)
+  #N = length(semNI)
+  N = sum(tableP$freq)
   
   # Calcula a proporção de cada espécie
   tableP$p = tableP$freq / N

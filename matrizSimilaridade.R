@@ -1,5 +1,9 @@
 m.similaridade=function(data, col.especies, col.comparison, rotulo.NI = "NI", indice = "both"){
   
+  # Remover NA
+  data = data[!is.na(data[col.especies]),]
+  data = data[!is.na(data[col.comparison]),]
+
   # Remover observações cuja espécie é desconhecida
   semNI = data[data[ ,col.especies] != rotulo.NI,]
   

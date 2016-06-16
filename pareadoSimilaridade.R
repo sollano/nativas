@@ -2,6 +2,7 @@ p.similaridade=function(x, y, rotuloNI = "NI", indice = "both"){
   
   # Remover observações cuja espécie é desconhecida
   semNI1 = x[x != rotuloNI]
+  semNI1 = x[!is.na(x)]
   
   # Encontrar o número de espéciue que ocorrem na parcela
   a = length(unique(semNI1))
