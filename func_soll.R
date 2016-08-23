@@ -1,12 +1,18 @@
+# Pacotes ####
 
-library(shiny)
-library(DT)
-library(dplyr)
+suppressPackageStartupMessages(library(dplyr))
 library(tidyr)
 library(lazyeval)
-library(xlsx)
-library(xlsxjars)
-library(markdown)
+
+# Modelos standard evaluation ####
+
+# group_by_(.dots = )
+# mutate_(.dots    = setNames( list( interp(~ var, var=as.name(var) ) ), nm=names ) )
+# summarise_(.dots = setNames( list( interp(~ var, var=as.name(var) ) ), nm=names ) )
+# transmute_(.dots = setNames( list( interp(~ var, var=as.name(var) ) ), nm=names ) )
+# filter_(interp(~  ,.values = list( ) ) )
+
+# Funcoes ####
 
 
 round_df <- function(x, digits) {
@@ -18,7 +24,181 @@ round_df <- function(x, digits) {
   x
 }
 
-acs <- function(df, grupos, idade, area_total, area_parcela, VCC, alpha = 0.05, Erro = 10, casas_decimais=4, pop="inf",tidy=T) {
+smaliancc <- function(df, grupos, di, hi, names = c("AS_CC", "VCC")){
+  
+  suppressPackageStartupMessages(require(dplyr))
+  require(lazyeval)
+  
+  df %>% 
+    group_by_(.dots = grupos) %>% 
+    mutate_(
+      .dots = 
+        setNames(
+          list( 
+            interp( ~ ( (di^2* pi) / 40000) , di = as.name(di)), 
+            interp( ~ ((AS + lead(AS) )/2 ) * (lead(hi) - hi) , AS = as.name("AS_CC"),  hi = as.name(hi))
+          ),
+          nm=names
+        )
+    )
+}
+
+smaliansc <- function(df, grupos, di, hi, es, names = c("di_sc","AS_SC", "VSC") ){
+  suppressPackageStartupMessages(require(dplyr))
+  require(lazyeval)
+  
+  df %>% 
+    group_by_(.dots = grupos) %>% 
+    mutate_(
+      .dots = 
+        setNames(
+          list(
+            interp( ~ di-2*(e_casca/10) , di= as.name(di), es = as.name(es) ),
+            interp( ~  (di_sc^2* pi) / 40000 , di_sc = as.name("di_sc")), 
+            interp( ~ ((AS + lead(AS) )/2 ) * (lead(hi) - hi) , AS = as.name("AS_SC"),  hi = as.name(hi))
+          ),
+          nm=names
+        )
+    )
+}
+
+hubercc <- function(df, grupos, di, hi, names = c("secao","AS_CC", "VCC")){
+  suppressPackageStartupMessages(require(dplyr))
+  require(lazyeval)
+  
+  df %>% 
+    group_by_(.dots = grupos) %>% 
+    mutate_(
+      .dots = 
+        setNames(
+          list( 
+            interp( ~row_number(grupos[length(grupos) ]), secao = as.name( grupos[length(grupos) ] ) ),
+            interp( ~ ( (di^2* pi) / 40000) , di = as.name(di)), 
+            interp( ~ ifelse(secao %% 2 == 0, AS * (lead(hi) - lag(hi) )  , NA) , AS = as.name("AS_CC"),  hi = as.name(hi))
+          ),
+          nm=names
+        )
+    )
+}
+
+hubersc <- function(df, grupos, di, hi, es, names = c("secao","di_sc","AS_SC", "VSC") ){
+  suppressPackageStartupMessages(require(dplyr))
+  require(lazyeval)
+  
+  df %>% 
+    group_by_(.dots = grupos) %>% 
+    mutate_(
+      .dots = 
+        setNames(
+          list(
+            interp( ~row_number(grupos[length(grupos) ]), secao = as.name(grupos[length(grupos) ] ) ),
+            interp( ~ di-2*(e_casca/10) , di= as.name(di), es = as.name(es) ),
+            interp( ~  (di_sc^2* pi) / 40000 , di_sc = as.name("di_sc")), 
+            interp( ~ ifelse(secao %% 2 == 0, AS * (lead(hi) - lag(hi) )  , NA) , AS = as.name("AS_SC"),  hi = as.name(hi))
+          ),
+          nm=names
+        )
+    )
+}
+
+hdjoin <- function(df, grupos, HT, DAP, OBS, dom, names="HD"){
+  suppressPackageStartupMessages(require(dplyr))
+  require(lazyeval)
+  
+  x <- df %>%
+    group_by_(.dots = grupos) %>%
+    filter_( 
+      .dots =
+        interp(~ !is.na(HT), HT = as.name(HT), .values =  list( HT = as.name(HT) ) ) ,
+      interp(~ !is.na(DAP), DAP = as.name(DAP), .values = list( DAP = as.name(DAP) )  ),
+      interp(~ OBS == dom, OBS = as.name(OBS), .values = list(OBS = as.name(OBS) ) )
+    ) %>%
+    summarise_(
+      .dots = 
+        setNames(
+          list(
+            interp( ~mean(HT), HT = as.name(HT) )
+          ),
+          nm=names
+        )
+    ) %>%
+    ungroup
+  
+  
+  df %>%
+    filter_( 
+      .dots =
+        interp(~ !is.na(DAP), DAP = as.name(DAP), .values = list( DAP = as.name(DAP) )  )
+    ) %>%
+    left_join(x, by = grupos)
+  
+}
+
+hd <- function(df, grupos, HT, DAP, OBS, dom, names="HD"){
+  suppressPackageStartupMessages(require(dplyr))
+  require(lazyeval)
+  
+  df %>%
+    group_by_(.dots = grupos) %>%
+    filter_( 
+      .dots =
+        interp(~ !is.na(HT), HT = as.name(HT), .values =  list( HT = as.name(HT) ) ) ,
+      interp(~ !is.na(DAP), DAP = as.name(DAP), .values = list( DAP = as.name(DAP) )  ),
+      interp(~ OBS == dom, OBS = as.name(OBS), .values = list(OBS = as.name(OBS) ) )
+    ) %>%
+    summarise_(
+      .dots = 
+        setNames(
+          list(
+            interp( ~mean(HT), HT = as.name(HT) )
+          ),
+          nm=names
+        )
+    ) %>%
+    ungroup
+}
+
+nv_parcela <- function(df, grupos, var_medias=c("IDADE", "AREA_TALHAO", "AREA_PARCELA", "HT_EST", "HD"), var_somas_ext=c("AS","VCC", "VSC"), ap = "AREA_PARCELA" ){
+  
+  var_medias[var_medias==ap] <- "area_parcela"
+  names(df)[names(df)==ap] <- "area_parcela"
+  
+  df %>% 
+    group_by_(.dots = grupos) %>% 
+    do(cbind( 
+      summarise_each_(., funs(mean), var_medias ) ,
+      summarise_each_(.,  funs(round(sum(.) * 10000/ mean(area_parcela), 4 ) ) , var_somas_ext  )   )
+    )
+  
+}
+
+nv_parcela <- function(df, grupos, area_talhao, area_parcela, idade, DAP, HT, HD, VCC, VSC){
+  
+  df %>% 
+    group_by_(.dots = grupos) %>% 
+    mutate_(.dots    = setNames( list( interp(~ pi*DAP^2/40000, DAP=as.name(DAP) ) ), nm="AS" ) ) %>% 
+    summarise_(
+      .dots = 
+        setNames(  list(  
+          interp(~round(mean(as.numeric(idade) ), 1), idade = as.name(idade)  ),
+          interp(~ mean(area_talhao), area_talhao = as.name(area_talhao)),
+          interp(~ mean(area_parcela), area_parcela = as.name(area_parcela)),
+          interp(~ mean(DAP), DAP = as.name(DAP) ),
+          ~ round(sqrt(mean(AS) * 40000 / pi), 2)  ,
+          interp(~mean(HT), HT = as.name(HT) ),
+          interp(~mean(HD), HD = as.name(HD) ),
+          interp(~round(sum(AS) * 10000/ mean(area_parcela), 4 ), AS = as.name("AS"), area_parcela = as.name(area_parcela) ),
+          interp(~round(sum(VCC) * 10000/ mean(area_parcela), 4 ), VCC = as.name(VCC), area_parcela = as.name(area_parcela) ),
+          interp(~round(sum(VSC) * 10000/ mean(area_parcela), 4 ), VSC = as.name(VSC), area_parcela = as.name(area_parcela) )
+          
+        ), #list 
+        nm = c("IDADE", "AREA_TALHAO", "AREA_PARCELA_", "DAP", "q", "HT", "HD", "G", "VCC", "VSC" ) 
+        )#setnames 
+    )#sumarise
+  
+}
+
+acs <- function(df, grupos, idade, area_total, area_parcela, VCC, alpha = 0.05, Erro = 10, casas_decimais=4, pop="inf",tidy=T){
   suppressPackageStartupMessages(require(dplyr))
   require(tidyr)
   require(lazyeval)
@@ -79,7 +259,11 @@ acs <- function(df, grupos, idade, area_total, area_parcela, VCC, alpha = 0.05, 
         ) 
     ) %>%
     round_df(casas_decimais)
- 
+  
+  
+  
+  
+  
   if(tidy==F)
   {
     return(x)
@@ -115,7 +299,7 @@ acs <- function(df, grupos, idade, area_total, area_parcela, VCC, alpha = 0.05, 
   
 }
 
-ace <- function(df, grupos, idade, area_estrato, area_parcela, VCC, alpha = 0.05, Erro = 10, casas_decimais = 4, pop="inf", tidy=T ) {
+ace <- function(df, grupos, idade, area_estrato, area_parcela, VCC, alpha = 0.05, Erro = 10, casas_decimais = 4, pop="inf", tidy=T ){
   
   if(is.null(df)||missing(df) )
   {stop("Escolha o data frame") }
@@ -257,7 +441,7 @@ ace <- function(df, grupos, idade, area_estrato, area_parcela, VCC, alpha = 0.05
   return(z)
 }
 
-as_diffs <- function(df, grupos, idade, area_total, area_parcela, VCC, alpha = 0.05, Erro = 10, casas_decimais=4, tidy=T ) {
+as_diffs <- function(df, grupos, idade, area_total, area_parcela, VCC, alpha = 0.05, Erro = 10, casas_decimais=4, tidy=T ){
   suppressPackageStartupMessages(require(dplyr))
   require(tidyr)
   require(lazyeval)
@@ -344,386 +528,3 @@ as_diffs <- function(df, grupos, idade, area_total, area_parcela, VCC, alpha = 0
   
 }
 
-agregacao <- function(data, col.especies, col.parcelas, rotulo.NI = "NI"){
-  SPECIES = col.especies
-  PLOTS = col.parcelas
-  NI = rotulo.NI  
-  
-  # Remover NA
-  data = data[!is.na(data[SPECIES]),]
-  
-  # Remover NI
-  data = data[data[SPECIES] != NI,]
-  espList = levels(factor(data[,SPECIES]))
-  
-  # Constroi tabela de frequencia
-  pivot = data.frame(table(data[SPECIES]))
-  names(pivot) = c("especie", "sum")
-  pivot = pivot[which(pivot$especie %in% espList),]
-  
-  # Calcula número de parcelas na área de estudo
-  nplots = length(unique(data[,PLOTS]))
-  
-  # Qui-quadrado tabelado para indice de Hazen
-  chisq75 = qchisq(0.75, nplots - 1)
-  chisq99 = qchisq(0.99, nplots - 1)
-  
-  for (i in levels(data[,PLOTS])){
-    tableFreq = data.frame(table(data[data[PLOTS] == i,SPECIES]))
-    pivot = cbind(pivot, tableFreq[which(tableFreq[,1] %in% espList),2])
-    names(pivot)[ncol(pivot)] = i
-  } 
-  
-  agreg = pivot[1]
-  if(nplots > 3){
-    for (i in seq(1, length(pivot[,1]))){ 
-      Si = var(as.numeric(pivot[i, seq(3, (2 + nplots), 1)]))
-      Mi = mean(as.numeric(pivot[i, seq(3, (2 + nplots), 1)]))
-      agreg[i,"Payandeh"] = round(Si/Mi, 1)
-      if(round(Si/Mi, 1) == 1){
-        agreg[i, "Pay.res"] = "Aleatório"
-      } else if(round(Si/Mi, 1) < 1) {
-        agreg[i, "Pay.res"] = "Regular"
-      } else {
-        agreg[i, "Pay.res"] = "Agregado"
-      }
-      
-      agreg[i,"Hazen"] = round(Si/Mi * (nplots - 1), 1)
-      if(round(Si/Mi * (nplots - 1), 1) > chisq99){
-        agreg[i, "Haz.res"] = "Agregado"
-      } else if(round(Si/Mi * (nplots - 1), 1) < chisq75) {
-        agreg[i, "Haz.res"] = "Não agregado"
-      } else {
-        agreg[i, "Haz.res"] = "Tende ao agregado"
-      }
-      
-      if ( (as.numeric(pivot[i, 2]) * (as.numeric(pivot[i, 2])-1)) != 0){
-        agreg[i,"Morisita"] = round((sum(as.numeric(pivot[i, seq(3, (2 + nplots), 1)]) * (as.numeric(pivot[i, seq(3, (2 + nplots), 1)]) - 1))) / (as.numeric(pivot[i, 2]) * (as.numeric(pivot[i, 2])-1)) * nplots, 1)
-      } else {
-        agreg[i,"Morisita"] = round(0, 0)
-      }
-      if(agreg[i,"Morisita"] == 1){
-        agreg[i, "Mor.res"] = "Aleatório"
-      } else if(agreg[i,"Morisita"] < 1 & agreg[i,"Morisita"] > 0) {
-        agreg[i, "Mor.res"] = "Regular"
-      } else if(agreg[i,"Morisita"] == 0){
-        agreg[i, "Mor.res"] = "Rara"
-      } else {
-        agreg[i, "Mor.res"] = "Agregado"
-      }
-    }
-    return(agreg)
-  } else {
-    return("Baixo número de parcelas") 
-  }
-}
-
-shinyServer(function(input, output, session) {
-  
-  
-  outVar <- reactive({ # iremos salvar os nomes das variaveis do objeto carregado em uma funcao reativa
-    
-    if(input$Load == 0){return()} # se o botao load nao for pressionado, retornar nada
-    inFile <- input$file1 
-    if(is.null(inFile)){return(NULL)} # se o arquivo nao for carregado, retornar null
-    
-    # Carregar o arquivo com base em input
-    if(input$excel==F)
-    {
-      mydata <- read.csv(inFile$datapath, header=TRUE, sep=input$sep, dec=input$dec)
-      
-    }else {
-      mydata <- read.xlsx(inFile$datapath, 1)
-      
-    }
-    names(mydata) # nomes das variaveis do arquivo carregado
-  })  
-  
-  observe({ # Com observe iremos atualizar a lista de variaveis em selectizeInput
-    
-    #agregacao ####
-    
-    updateSelectizeInput( # funcao que atualiza um SelectizeInput
-      session, # sessao
-      "col.especies", # Id do SelecizeInput que sera atualizado
-      choices = outVar()) # lista de opcoes. No caso, nomes das variaveis do arquivo carregado pelo usuario
-    
-    updateSelectizeInput( # funcao que atualiza um SelectizeInput
-      session, # sessao
-      "col.parcelas", # Id do SelecizeInput que sera atualizado
-      choices = outVar()) # lista de opcoes. No caso, nomes das variaveis do arquivo carregado pelo usuario
-    
-    
-    # ACS ####
-    
-    updateSelectizeInput( # funcao que atualiza um SelectizeInput
-      session, # sessao
-      "idadeacs", # Id do SelecizeInput que sera atualizado
-      choices = outVar()) # lista de opcoes. No caso, nomes das variaveis do arquivo carregado pelo usuario
-    
-    updateSelectizeInput( # funcao que atualiza um SelectizeInput
-      session, # sessao
-      "area_totalacs", # Id do SelecizeInput que sera atualizado
-      choices = outVar()) # lista de opcoes. No caso, nomes das variaveis do arquivo carregado pelo usuario
-    
-    updateSelectizeInput( # funcao que atualiza um SelectizeInput
-      session, # sessao
-      "area_parcelaacs", # Id do SelecizeInput que sera atualizado
-      choices = outVar()) # lista de opcoes. No caso, nomes das variaveis do arquivo carregado pelo usuario
-    
-    updateSelectizeInput( # funcao que atualiza um SelectizeInput
-      session, # sessao
-      "VCCacs", # Id do SelecizeInput que sera atualizado
-      choices = outVar()) # lista de opcoes. No caso, nomes das variaveis do arquivo carregado pelo usuario
-    
-    updateSelectizeInput( # funcao que atualiza um SelectizeInput
-      session, # sessao
-      "gruposacs", # Id do SelecizeInput que sera atualizado
-      choices = outVar()) # lista de opcoes. No caso, nomes das variaveis do arquivo carregado pelo usuario
-    
-    # ACE ####
-    
-    updateSelectizeInput( # funcao que atualiza um SelectizeInput
-      session, # sessao
-      "idadeace", # Id do SelecizeInput que sera atualizado
-      choices = outVar()) # lista de opcoes. No caso, nomes das variaveis do arquivo carregado pelo usuario
-    
-    updateSelectizeInput( # funcao que atualiza um SelectizeInput
-      session, # sessao
-      "area_estratoace", # Id do SelecizeInput que sera atualizado
-      choices = outVar()) # lista de opcoes. No caso, nomes das variaveis do arquivo carregado pelo usuario
-    
-    updateSelectizeInput( # funcao que atualiza um SelectizeInput
-      session, # sessao
-      "area_parcelaace", # Id do SelecizeInput que sera atualizado
-      choices = outVar()) # lista de opcoes. No caso, nomes das variaveis do arquivo carregado pelo usuario
-    
-    updateSelectizeInput( # funcao que atualiza um SelectizeInput
-      session, # sessao
-      "VCCace", # Id do SelecizeInput que sera atualizado
-      choices = outVar()) # lista de opcoes. No caso, nomes das variaveis do arquivo carregado pelo usuario
-    
-    updateSelectizeInput( # funcao que atualiza um SelectizeInput
-      session, # sessao
-      "gruposace", # Id do SelecizeInput que sera atualizado
-      choices = outVar()) # lista de opcoes. No caso, nomes das variaveis do arquivo carregado pelo usuario
-    
-    
-    
-    
-    
-    # ACS ####
-    
-    updateSelectizeInput( # funcao que atualiza um SelectizeInput
-      session, # sessao
-      "idadeas", # Id do SelecizeInput que sera atualizado
-      choices = outVar()) # lista de opcoes. No caso, nomes das variaveis do arquivo carregado pelo usuario
-    
-    updateSelectizeInput( # funcao que atualiza um SelectizeInput
-      session, # sessao
-      "area_totalas", # Id do SelecizeInput que sera atualizado
-      choices = outVar()) # lista de opcoes. No caso, nomes das variaveis do arquivo carregado pelo usuario
-    
-    updateSelectizeInput( # funcao que atualiza um SelectizeInput
-      session, # sessao
-      "area_parcelaas", # Id do SelecizeInput que sera atualizado
-      choices = outVar()) # lista de opcoes. No caso, nomes das variaveis do arquivo carregado pelo usuario
-    
-    updateSelectizeInput( # funcao que atualiza um SelectizeInput
-      session, # sessao
-      "VCCas", # Id do SelecizeInput que sera atualizado
-      choices = outVar()) # lista de opcoes. No caso, nomes das variaveis do arquivo carregado pelo usuario
-    
-    updateSelectizeInput( # funcao que atualiza um SelectizeInput
-      session, # sessao
-      "gruposas", # Id do SelecizeInput que sera atualizado
-      choices = outVar()) # lista de opcoes. No caso, nomes das variaveis do arquivo carregado pelo usuario
-    
-  })
-  
-  newData <- reactive({ # Criamos uma nova funcao reactive. este sera o objeto filtrado, utilizado nos calculos
-    
-    if(input$Load==0){return()} # se o botao load nao for pressionado(==0), retornar nada
-    else(inFile <- input$file1) # caso contrario, salvar o caminho do arquivo carregado em inFile
-    
-    # input$file1 sera NULL inicialmente. apos o usuario selecionar
-    # e upar um arquivo, ele sera um data frame com as colunas
-    # 'size', 'type', e 'datapath' . A coluna 'datapath' 
-    # ira conter os nomes dos arquivos locais onde o dado pode ser encontrado
-    
-    if (is.null(inFile)){return(NULL)} # se o arquivo nao for carregado, retornar null
-    else if(input$excel == F)
-    {
-      raw_data <- read.csv(inFile$datapath, header=TRUE, sep=input$sep, dec=input$dec,quote='"')
-    } else {raw_data <- read.xlsx(inFile$datapath, 1)  }
-    # Carregamos o arquivo em um objeto
-    
-    
-    raw_data # tabela final a ser mostrada. 
-    
-  })
-  
-  tabagregate <- reactive({
-    
-    dados <- newData()
-    
-    x <- agregacao(dados, input$col.especies, input$col.parcelas, "NI")
-    
-    x
-  })
-  
-  tabacs <- reactive({
-    
-    dados <- newData() 
-    
-    x <-     acs(dados, grupos = input$gruposacs, input$idadeacs, input$area_totalacs, input$area_parcelaacs , input$VCCacs, pop=input$popacs, alpha = input$alphaacs, Erro = input$erroacs, casas_decimais = input$cdacs, tidy=input$tidyacs)
-    
-    x
-    
-  })
-  
-  tabace1 <- reactive({
-    
-    dados <- newData() 
-    x <- ace(dados, grupos = input$gruposace, input$idadeace, input$area_estratoace, input$area_parcelaace , input$VCCace, pop=input$popace, alpha = input$alphaace, Erro = input$erroace, casas_decimais = input$cdace, tidy=input$tidyace)[[1]]
-    x
-    
-  })
-  
-  tabace2 <- reactive({
-    
-    dados <- newData() 
-    x <- ace(dados, grupos = input$gruposace, input$idadeace, input$area_estratoace, input$area_parcelaace , input$VCCace, pop=input$popace, alpha = input$alphaace, Erro = input$erroace, casas_decimais = input$cdace, tidy=input$tidyace)[[2]]
-    x
-    
-  })
-  
-  tabas <- reactive({
-    
-    
-    dados <- newData()
-    
-    x <- as_diffs(dados, grupos = input$gruposas, input$idadeas, input$area_totalas, input$area_parcelaas , input$VCCas, alpha = input$alphaas, Erro = input$erroas, casas_decimais = input$cdas, tidy=input$tidyas)
-    
-    x
-  }) 
-  
-  output$data <- renderDataTable({ # renderizamos uma DT::DataTable
-    
-    # salvamos a funcao newData, que contem o arquivo carregado pelo usuario em um objeto
-    data <- newData() 
-    
-    datatable(data) # Criamos uma DT::datatable com base no objeto
-    
-    # Este arquivo e reativo, e ira se alterar caso o usuario
-    # aperte o botao input$columns
-    
-  })
-  
-  output$agreg <- renderDataTable({
-    
-    if(input$Loadagreg)
-    {
-      agregdt <- tabagregate() 
-      
-      datatable( agregdt,
-                 options = list(searching = T,
-                                paging=T )  ) 
-      }
-    
-  }) 
-  
-  output$acs <- renderDataTable({
-    
-    acsdt <- tabacs() 
-    
-    if(input$Loadacs)
-    {
-      datatable( acsdt,
-                 options = list(searching = FALSE,
-                                paging=FALSE )   )
-    } 
-    
-  })
-  
-  output$ace1 <- renderDataTable({
-    
-    ace1dt <- tabace1() 
-    
-    if(input$Loadace)
-    {
-      datatable( ace1dt,
-                 options = list(searching = FALSE,
-                                paging=FALSE )  )
-    } 
-    
-  })
-  
-  output$ace2 <- renderDataTable({
-    
-    ace2dt <- tabace2() 
-    
-    if(input$Loadace)
-    {
-      datatable( ace2dt,
-                 options = list(searching = FALSE,
-                                paging=FALSE ) )
-    } 
-    
-  })
-  
-  output$as <- renderDataTable({
-    
-    asdt <- tabas() 
-    
-    if(input$Loadas)
-    {
-      datatable( asdt,
-                 options = list(searching = FALSE,
-                                paging=FALSE )    )
-    } 
-    
-  })
-  
-  datasetInput <- reactive({
-    switch(input$dataset,
-           "Amostragem Casual Simples" = tabacs(),
-           "Amostragem Casual Estratificada 1" = tabace2(),
-           "Amostragem Casual Estratificada 2" = tabace1(),
-           "Amostragem Sistematica" = tabas())
-  })
-  
-  output$table <- renderTable({
-    datasetInput()
-  })
-  
-  output$downloadData <- downloadHandler(
-    filename = function() { 
-      
-      if(input$datasetformat==".csv")
-      {
-        paste(input$dataset, '.csv', sep='') 
-      }
-      else if(input$datasetformat==".xlsx")
-      {
-        paste(input$dataset, '.xlsx', sep='') 
-      }
-    },
-    
-    content = function(file) {
-      if(input$datasetformat==".csv")
-      {
-        write.csv(datasetInput(), file, row.names = F)
-      }
-      else if(input$datasetformat==".xlsx")
-      {
-        xlsx::write.xlsx2(as.data.frame( datasetInput() ), file, row.names = F)
-      }
-      
-      
-      
-    }
-  )
-  
-  
-})

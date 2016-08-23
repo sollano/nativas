@@ -53,7 +53,7 @@ estrutura = function(data, col.especies, col.dap, col.parcelas, area.parcela, es
     
     # Calcula densidade absoluta e relativa
  
-    DA = pivot[2] / (nplots * AREA.PLOT)
+    DA = pivot[2] / (nplots * mean(AREA.PLOT) ) # Media para poder aceitar vetores como entrada
     result["DA"] = round(DA, 4)
 
     AcDAi = sum(DA)    
