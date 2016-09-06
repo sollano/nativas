@@ -1,6 +1,7 @@
 
 library(shiny)
 library(DT)
+library(plyr)
 library(dplyr)
 library(tidyr)
 library(lazyeval)
@@ -8,343 +9,9 @@ library(xlsx)
 library(xlsxjars)
 library(markdown)
 
+# Funcoes Nativas ####
 
-round_df <- function(x, digits) {
-  # round all numeric variables
-  # x: data frame 
-  # digits: number of digits to round
-  numeric_columns <- sapply(x, class) == 'numeric'
-  x[numeric_columns] <-  round(x[numeric_columns], digits)
-  x
-}
-
-acs <- function(df, grupos, idade, area_total, area_parcela, VCC, alpha = 0.05, Erro = 10, casas_decimais=4, pop="inf",tidy=T) {
-  suppressPackageStartupMessages(require(dplyr))
-  require(tidyr)
-  require(lazyeval)
-  
-  if(missing(grupos) || grupos==FALSE || is.null(grupos) ){grupos=NULL}
-  
-  if(is.null(df)||missing(df) )
-  {stop("Escolha o data frame") }
-  
-  if(is.null(idade)||missing(idade) )
-  {stop("Escolha a variavel Idade (meses) ") }
-  
-  if(is.null(area_total)||missing(area_total) )
-  {stop("Escolha a variavel Area total (ha) ") }
-  
-  if(is.null(area_parcela)||missing(area_parcela) )
-  {stop("Escolha a variavel Area da parcela (m2) ") }
-  
-  if(is.null(VCC)||missing(VCC) )
-  {stop("Escolha a variavel Volume (m3)") }
-  
-  
-  
-  
-  x <-df %>%
-    na_if(0) %>%
-    group_by_(.dots = grupos) %>%
-    summarise_(
-      .dots = 
-        setNames( 
-          list( 
-            interp(~ mean(idade), idade = as.name(idade) ),
-            interp(~ n() ),
-            interp(~ mean(area_total) / ( mean(area_parcela)/10000 ), area_total = as.name(area_total), area_parcela = as.name(area_parcela)  ),
-            interp(~ sd(VCC) / mean(VCC) * 100, VCC = as.name(VCC) ),
-            ~ qt(alpha/2, df = n-1, lower.tail = FALSE),
-            ~ ifelse(pop=="inf", 
-                     qt(alpha/2, df = ceiling( t^2 * CV^2 / Erro^2) - 1, lower.tail = FALSE)  ,
-                     qt(alpha/2, df = ceiling( t^2 * CV^2 / ( Erro^2 +(t^2 * CV^2 / N) ) ) - 1, lower.tail = FALSE) ) ,
-            ~ ifelse(pop=="inf",
-                     ceiling( t_rec ^2 * CV^2 / Erro^2 ) ,
-                     ceiling( t_rec ^2 * CV^2 / ( Erro^2 +(t_rec^2 * CV^2 / N) ) ) ),
-            interp(~ mean(VCC, na.rm=T), VCC = as.name(VCC) ),
-            interp(~ ifelse(pop=="inf", 
-                            sqrt( var(VCC)/n ), 
-                            sqrt( var(VCC)/n  * (1 - (n/N)) ) ) , 
-                   VCC = as.name(VCC), n = as.name("n"), N = as.name("N") ),
-            ~ Sy * t ,
-            ~ Erroabs / Y * 100,
-            ~ Y * N,
-            ~ Erroabs * N,
-            ~ Y - Erroabs,
-            ~ Y + Erroabs,
-            ~ Yhat - Erro_Total,
-            ~ Yhat + Erro_Total
-          ), 
-          nm=c("idade", "n","N", "CV","t","t_rec","n_recalc" ,"Y","Sy","Erroabs" ,"Erroperc","Yhat", "Erro_Total","IC_ha_Inf" ,"IC_ha_Sup","IC_Total_inf","IC_Total_Sup")
-        ) 
-    ) %>%
-    round_df(casas_decimais)
- 
-  if(tidy==F)
-  {
-    return(x)
-  } 
-  else if(tidy==T & is.null(grupos) )
-  {
-    x <- as.data.frame(t(x))
-    colnames(x) <- "Valores"
-    
-    x <- x %>%
-      mutate(Variaveis=c("Idade (meses)", "Numero de Parcelas (n)","Numero de parcelas cabiveis (N)", "Coeficiente de Variancia (CV)","t-student","t recalculado","n recalculado" ,"Media geral (Y)","Erro-Padrao da Media (Sy)","Erro Absoluto" ,"Erro Relativo (%)","Volume total estimado (Yhat)", "Erro Total","IC (m³/ha) Inferior" ,"IC (m³/ha) Superior","IC Total (m³) inferior","IC Total (m³) Superior") ) %>%
-      select(Variaveis, Valores)
-    
-    return(x)
-  }
-  else
-  {
-    
-    vec1 <- names(x)[! names(x) %in% grupos ]
-    vec2 <- grupos[length(grupos)]
-    vec3 <- grupos[grupos!=vec2]
-    
-    y<- x %>%
-      gather_("Variaveis","value", vec1  ) %>% 
-      arrange_( grupos ) %>% 
-      spread_(vec2,"value",sep="")%>%
-      group_by_(.dots=vec3) %>%
-      do(.[c(9,10,11,1,14,15,12,16,13,3,4,17,2,5,6,7,8) , ] ) %>%
-      mutate(Variaveis=c("Idade (meses)", "Numero de Parcelas (n)","Numero de parcelas cabiveis (N)", "Coeficiente de Variancia (CV)","t-student","t recalculado","n recalculado" ,"Media geral (Y)","Erro-Padrao da Media (Sy)","Erro Absoluto" ,"Erro Relativo (%)","Volume total estimado (Yhat)", "Erro Total","IC (m³/ha) Inferior" ,"IC (m³/ha) Superior","IC Total (m³) inferior","IC Total (m³) Superior") )
-    
-    return(y)
-  }
-  
-}
-
-ace <- function(df, grupos, idade, area_estrato, area_parcela, VCC, alpha = 0.05, Erro = 10, casas_decimais = 4, pop="inf", tidy=T ) {
-  
-  if(is.null(df)||missing(df) )
-  {stop("Escolha o data frame") }
-  
-  if(is.null(idade)||missing(idade) )
-  {stop("Escolha a variavel Idade (meses) ") }
-  
-  if(is.null(grupos)||is.na(grupos)||missing(grupos)  )
-  {stop("Escolha a(s) variavel(is) de estratificacao") }
-  
-  if(is.null(area_estrato)||missing(area_estrato) )
-  {stop("Escolha a variavel Area do Estrato (ha) ") }
-  
-  if(is.null(area_parcela)||missing(area_parcela) )
-  {stop("Escolha a variavel Area da parcela (m2) ") }
-  
-  if(is.null(VCC)||missing(VCC) )
-  {stop("Escolha a variavel Volume (m3)") }
-  
-  
-  
-  
-  
-  
-  suppressPackageStartupMessages(require(dplyr))
-  require(tidyr)
-  require(lazyeval)
-  
-  x <- df %>%
-    na_if(0) %>%
-    group_by_(.dots = grupos) %>%
-    summarise_(.dots = setNames( list( interp( ~ mean(area_estrato) / (mean(area_parcela)/10000), area_estrato = as.name(area_estrato), area_parcela = as.name(area_parcela) ) ), nm="Nj" ) ) %>%
-    summarise(N  = sum(Nj) ) %>% 
-    ungroup %>%
-    select(N) %>%
-    cbind(df,.) %>% 
-    mutate_(.dots = setNames( list( interp( ~ area_estrato / ( area_parcela/10000 ), area_estrato = as.name(area_estrato), area_parcela = as.name(area_parcela) ) ), nm="Nj" ) ) %>%
-    group_by_(.dots = grupos) %>%
-    summarise_(.dots = 
-                 setNames( 
-                   list(
-                     interp(~ mean(idade), idade = as.name(idade) ),
-                     interp(~ n() ) ,
-                     ~ mean(Nj),
-                     ~ mean(N),
-                     ~ Nj/N,
-                     interp(~ sum(VCC), VCC= as.name(VCC) ),
-                     interp(~ sum(VCC^2), VCC= as.name(VCC) ),
-                     interp(~ mean(VCC, na.rm =T), VCC= as.name(VCC) ),
-                     interp(~ Pj * var(VCC, na.rm=T), Pj = as.name("Pj"), VCC = as.name(VCC) ),
-                     interp(~ Pj * sd(VCC, na.rm=T), Pj = as.name("Pj"), VCC = as.name(VCC) ),
-                     ~ Pj * Yj
-                   ), 
-                   nm=c("IDADE", "nj", "Nj", "N", "Pj", "Eyj", "Eyj2", "Yj", "Pj_Sj2", "Pj_Sj", "Pj_Yj")
-                 ) 
-    ) %>%
-    ungroup %>%
-    mutate( EPj_Sj2  =   sum(Pj_Sj2), 
-            EPj_Sj   =   sum(Pj_Sj), 
-            Y        =   sum(Pj_Yj), # media estratificada (ponderada)     
-            CV       = EPj_Sj / Y * 100, # Coeficiente de variancia
-            t        = qt(alpha/2, df = sum(nj)-1, lower.tail = FALSE),     # a seguir, o t sera calculado utilizando o n calculado, de forma direta
-            t_rec    = ifelse(pop=="inf",
-                              qt(alpha/2, df = ceiling( t^2 * EPj_Sj^2 / (Erro*Y/100)^2 )-1, lower.tail = FALSE),
-                              qt(alpha/2, df = ceiling( t^2 * EPj_Sj^2 / ( (Erro*Y/100)^2 + (t^2 * EPj_Sj2 / N )  ) )-1, lower.tail = FALSE)
-            ),
-            n_recalc = ifelse(pop=="inf",
-                              ceiling( t_rec^2 * EPj_Sj^2 / (Erro*Y/100)^2 ),
-                              ceiling( t_rec^2 * EPj_Sj^2 / ( (Erro*Y/100)^2 + (t_rec^2 * EPj_Sj2 / N )  ) ) 
-            ), # agora fazemos o recalculo do n, utilizando o t correto
-            nj_otimo = ceiling(n_recalc*Pj_Sj/EPj_Sj), # por estrato utilizando o metodo de Neyman
-            n_otimo  = sum(nj_otimo), # n calculado total
-            Yhatj    = Nj * Yj )  %>% # producao total por estrato
-    round_df(casas_decimais)
-  
-  y <- x %>%
-    group_by_(.dots=grupos[-length(grupos)] ) %>%
-    summarise(t            = mean(t),
-              Sy           = ifelse(pop=="inf",
-                                    sqrt(sum(Pj_Sj)^2 / sum(nj) ),
-                                    sqrt(sum(Pj_Sj) ^2 / sum(nj) - (mean(EPj_Sj2) / mean(N) )  )
-              ), # Erro-padrao da media
-              Y            = sum(Pj_Yj), # media de vcc estratificada (ponderada) 
-              Erroabs      = Sy * mean(t), # Erro Absoluto
-              Erroperc     = Erroabs / Y * 100, # Erro percentual
-              Yhat         = sum(Nj) * Y, # Volume Total
-              Erro_Total   = Erroabs * sum(Nj), # Erro Total
-              IC_ha_Inf    = Y - Erroabs, # Intervalo de confianca por ha inferior
-              IC_ha_Sup    = Y + Erroabs, # Intervalo de confianca por ha superior
-              IC_Total_inf = Yhat - Erro_Total, # Intervalo de confianca total inferior
-              IC_Total_Sup = Yhat + Erro_Total    ) %>% # Intervalo de confianca total superior)
-    round_df(casas_decimais)  
-  
-  
-  
-  if(tidy==T)
-  {
-    vec1 <- names(x)[! names(x) %in% grupos ]
-    vec2 <- grupos[length(grupos)]
-    vec3 <- grupos[grupos!=vec2]
-    vec4 <-  names(y)[! names(y) %in% vec3 ] 
-    vec5 <- vec3[length(vec3)]
-    vec6 <- vec3[vec3!=vec5]
-    
-    x <-  x %>%
-      gather_("Variaveis","value", vec1) %>% 
-      arrange_(grupos) %>% 
-      spread_(vec2,"value",sep="") %>%
-      group_by_(.dots=vec3) %>%
-      do(.[c( 6,10,11,7,13,4,5, 21, 15,14,16,3,2,19,1,17,18,9,12,8,20) , ] ) %>%
-      mutate(Variaveis = c("Idade (meses)","numero de amostras / estrato (nj)" ," Numero de amostras cabiveis / estrato (Nj)","Numero de amostras cabiveis (N)", "Proporcao Nj/N (Pj)","Somatorio do volume por estrato (Eyj)", "Soma quadratica do volume por estrato (Eyj2)", "Media do volume por estrato (Yj)", "PjSj2", "PjSj", "PjYj","EPjSj2","EPjSj", "Media Estratificada (Y)", "Coeficiente de Variancia (CV)", "t-student", "t recalculado", "n recalculado","Numero otimo de parcelas por estrato (nj otimo)", "numero otimo de parcelas (n otimo)", "Producao total por estrato (Yhatj)"  ) )
-    
-    if(length(grupos)!=1 )
-    {
-      y <- y %>%
-        gather_("Variaveis","value", vec4) %>% 
-        arrange_(vec3) %>% 
-        spread_(vec5,"value") %>%
-        group_by_(.dots=vec6) %>%
-        do(.[c(9,8,10,2,3,11,1,4,5,6,7 ) , ] ) %>%
-        mutate(Variaveis = c("t-student","Erro-Padrao da Media (Sy)","Media estratificada (Y)","Erro Absoluto" ,"Erro Relativo (%)","Volume total estimado (Yhat)", "Erro Total","IC (m³/ha) Inferior" ,"IC (m³/ha) Superior","IC Total (m³) inferior","IC Total (m³) Superior") ) 
-      
-    }
-    else
-    {
-      
-      y <- y %>%
-        gather_("Variaveis","value", vec4) %>% 
-        do(.[c(9,8,10,2,3,11,1,4,5,6,7 ) , ] ) %>%
-        mutate(Variaveis = c("t-student","Erro-Padrao da Media (Sy)","Media estratificada (Y)","Erro Absoluto" ,"Erro Relativo (%)","Volume total estimado (Yhat)", "Erro Total","IC (m³/ha) Inferior" ,"IC (m³/ha) Superior","IC Total (m³) inferior","IC Total (m³) Superior") ) 
-      
-    }
-    
-  }
-  
-  
-  z <- list(Tabela1 = x, Tabela2 = y)
-  
-  return(z)
-}
-
-as_diffs <- function(df, grupos, idade, area_total, area_parcela, VCC, alpha = 0.05, Erro = 10, casas_decimais=4, tidy=T ) {
-  suppressPackageStartupMessages(require(dplyr))
-  require(tidyr)
-  require(lazyeval)
-  
-  if(missing(grupos) || grupos==FALSE || is.null(grupos) ){grupos=NULL}
-  
-  if(is.null(df)||missing(df) )
-  {stop("Escolha o data frame") }
-  
-  if(is.null(idade)||missing(idade) )
-  {stop("Escolha a variavel Idade (meses) ") }
-  
-  if(is.null(area_total)||missing(area_total) )
-  {stop("Escolha a variavel Area total (ha) ") }
-  
-  if(is.null(area_parcela)||missing(area_parcela) )
-  {stop("Escolha a variavel Area da parcela (m2) ") }
-  
-  if(is.null(VCC)||missing(VCC) )
-  {stop("Escolha a variavel Volume (m3)") }
-  
-  x <- df %>%
-    group_by_(.dots = grupos) %>%
-    summarise_(
-      .dots = 
-        setNames( 
-          list( 
-            interp(~ mean(idade), idade = as.name(idade) ),
-            interp(~ n() ),
-            interp(~ mean(area_total) / ( mean(area_parcela)/10000 ), area_total = as.name(area_total), area_parcela = as.name(area_parcela)  ),
-            interp(~ sd(VCC) / mean(VCC) * 100, VCC = as.name(VCC) ),
-            ~ qt(alpha/2, df = n-1, lower.tail = FALSE),
-            interp(~ mean(VCC, na.rm=T), VCC = as.name(VCC) ),
-            interp(~ (sum(diff(VCC)^2) / (2 * n * (n-1) ) ) * ((N-n)/N) , VCC = as.name(VCC), n = as.name("n"), N = as.name("N") ),
-            ~ Sy * t ,
-            ~ Erroabs / Y * 100,
-            ~ Y * N,
-            ~ Erroabs * N,
-            ~ Y - Erroabs,
-            ~ Y + Erroabs,
-            ~ Yhat - Erro_Total,
-            ~ Yhat + Erro_Total
-          ), 
-          nm=c("idade", "n","N", "CV","t","Y","Sy","Erroabs" ,"Erroperc","Yhat", "Erro_Total","IC_ha_Inf" ,"IC_ha_Sup","IC_Total_inf","IC_Total_Sup")
-        ) 
-    ) %>%
-    round_df(casas_decimais)
-  
-  
-  if(tidy==F)
-  {
-    return(x)
-  } 
-  else if(tidy==T & is.null(grupos) )
-  {
-    x <- as.data.frame(t(x))
-    colnames(x) <- "Valores"
-    
-    x <- x %>%
-      mutate(Variaveis=c("Idade (meses)", "Numero de Parcelas (n)","Numero de parcelas cabiveis (N)", "Coeficiente de Variancia (CV)","t-student","Media geral (Y)","Erro-Padrao da Media (Diferencas Sucessivas) (Sy)","Erro Absoluto" ,"Erro Relativo (%)","Volume total estimado (Yhat)", "Erro Total","IC (m³/ha) Inferior" ,"IC (m³/ha) Superior","IC Total (m³) inferior","IC Total (m³) Superior") ) %>%
-      select(Variaveis, Valores)
-    
-    return(x)
-  }
-  else
-  {
-    
-    vec1 <- names(x)[! names(x) %in% grupos ]
-    vec2 <- grupos[length(grupos)]
-    vec3 <- grupos[grupos!=vec2]
-    
-    y<- x %>%
-      gather_("Variaveis","value", vec1  ) %>% 
-      arrange_( grupos ) %>% 
-      spread_(vec2,"value",sep="")%>%
-      group_by_(.dots=vec3) %>%
-      do(.[c(9,10,11,1,13,14,12,3,4,15,2,5,6,7,8) , ] ) %>%
-      mutate(Variaveis=c("Idade (meses)", "Numero de Parcelas (n)","Numero de parcelas cabiveis (N)", "Coeficiente de Variancia (CV)","t-student" ,"Media geral (Y)","Erro-Padrao da Media (Diferencas Sucessivas) (Sy)","Erro Absoluto" ,"Erro Relativo (%)","Volume total estimado (Yhat)", "Erro Total","IC (m³/ha) Inferior" ,"IC (m³/ha) Superior","IC Total (m³) inferior","IC Total (m³) Superior") )
-    
-    return(y)
-  }
-  
-  
-  
-}
-
-agregacao <- function(data, col.especies, col.parcelas, rotulo.NI = "NI"){
+agregacao = function(data, col.especies, col.parcelas, rotulo.NI = "NI"){
   SPECIES = col.especies
   PLOTS = col.parcelas
   NI = rotulo.NI  
@@ -418,130 +85,906 @@ agregacao <- function(data, col.especies, col.parcelas, rotulo.NI = "NI"){
   }
 }
 
+estrutura = function(data, col.especies, col.dap, col.parcelas, area.parcela, est.vertical = NA, est.interno = NA, nao.identificada = "NI"){
+  SPECIES = col.especies
+  DBH = col.dap
+  PLOTS = col.parcelas
+  # alterei aqui para areaplot poder ser uma coluna do data frame
+  if(is.numeric(area.parcela) ){AREA.PLOT = area.parcela}else(AREA.PLOT = mean(data[,area.parcela],na.rm = T ) )
+  VERTICAL = est.vertical
+  INTERNA = est.interno
+  NI = nao.identificada
+  
+  # Ajustar formato categórico
+  data[,VERTICAL] = as.factor(data[,VERTICAL])
+  data[,INTERNA] = as.factor(data[,INTERNA])
+  
+  # Remover NA
+  data = data[!is.na(data[SPECIES]),]
+  data = data[!is.na(data[DBH]),]
+  
+  # Remover NI
+  data = data[data[SPECIES] != NI,]
+  espList = levels(factor(data[,SPECIES]))
+  
+  # Constroi tabela de frequencia
+  pivot = data.frame(table(data[SPECIES]))
+  names(pivot) = c("especie", "sum")
+  pivot = pivot[which(pivot$especie %in% espList),]
+  
+  # Calcula número de parcelas na área de estudo
+  nplots = length(unique(data[,PLOTS]))
+  
+  # Estrutura horizontal
+  # Calcula frequencia absoluta e relativa
+  for (i in levels(data[,PLOTS])){
+    tableFreq = data.frame(table(data[data[PLOTS] == i,SPECIES]))
+    pivot = cbind(pivot, tableFreq[which(tableFreq[,1] %in% espList),2])
+    names(pivot)[ncol(pivot)] = i
+  }    
+  
+  AcFAi = 0
+  FA = 0
+  for (i in seq(1, nrow(pivot), 1)){
+    contagem = pivot[i,-c(1,2)] > 0
+    cplots = length(contagem[contagem == TRUE])
+    FAi = cplots/nplots * 100
+    AcFAi = AcFAi + FAi
+    FA[i] = FAi
+  }
+  
+  result = pivot[1]
+  result["FA"] = round(FA, 4)
+  
+  FR = FA / AcFAi * 100
+  result["FR"] = round(FR, 4)
+  
+  # Calcula densidade absoluta e relativa
+  
+  DA = pivot[2] / (nplots * (AREA.PLOT/10000) ) # Media para poder aceitar vetores como entrada
+  result["DA"] = round(DA, 4)
+  
+  AcDAi = sum(DA)    
+  DR = DA / AcDAi * 100
+  result["DR"] = round(DR, 4)
+  
+  # Calcula dominância absoluta e relativa
+  
+  data["AB"] = data[DBH]^2 * pi / 40000
+  AB = tapply(data[,"AB"], data[,SPECIES], sum)
+  AB = AB[which(names(AB) %in% espList)]
+  
+  DoA = AB / (nplots * (AREA.PLOT/10000) )
+  result["DoA"] = round(DoA, 6)
+  
+  AcDoAi = sum(DoA)
+  DoR = DoA / AcDoAi * 100
+  result["DoR"] = round(DoR, 6)
+  rm(AB, AcDAi, AcDoAi, AcFAi, cplots, DoA, DoR, FA, FAi, FR, DA, DR, tableFreq, i, contagem)
+  
+  if (!is.na(est.vertical)){
+    # Estrutura vertical
+    
+    vert = pivot["especie"]
+    for (j in levels(data[,VERTICAL])){
+      daVert = data.frame(table(data[data[VERTICAL] == j, SPECIES]))
+      vert = cbind(vert, daVert[which(daVert[,1] %in% espList),2])
+    }
+    names(vert)[-1] = levels(data[,VERTICAL])
+    
+    VFj = data.frame()
+    for (j in levels(data[,VERTICAL])){
+      VFj[1,j] = sum(vert[, j]) / sum(vert[, seq(2,length(levels(data[,VERTICAL]))+1,1)]) * 100
+    }
+    
+    for (j in levels(data[,VERTICAL])){
+      for (i in seq(1, nrow(vert), 1)){
+        vert[i, paste("VF", j, sep = "")] = vert[i, j] * VFj[1, j]
+        result[i, paste("VF", j, sep = "")] = vert[i, j] * VFj[1, j]
+      }
+    }
+    
+    AcPSAi = 0
+    for (i in seq(1, nrow(vert), 1)){
+      PSAi = 0
+      for (j in levels(data[,VERTICAL])){
+        
+        PSAi = PSAi + VFj[1, j] * vert[i, j] 
+      }
+      vert[i, "PSA"] = PSAi
+      AcPSAi = AcPSAi + PSAi
+    }
+    
+    result["PSA"] = vert["PSA"]
+    result["PSR"] = vert["PSA"] / AcPSAi * 100
+    rm(AcPSAi, i, j, PSAi, VFj, daVert, vert)
+  }
+  
+  if (!is.na(est.interno)){
+    
+    # Estrutura Interna
+    
+    intern = pivot["especie"]
+    for (j in levels((data[,INTERNA]))){
+      daInter = data.frame(table(data[data[INTERNA] == j, SPECIES]))
+      intern = cbind(intern, daInter[which(daInter[,1] %in% espList),2])
+    }
+    names(intern)[-1] = levels(data[,INTERNA])
+    
+    for (j in levels(data[,INTERNA])){
+      for (i in seq(1, nrow(intern), 1)){
+        intern[i, paste("QF", j, sep = "")] = intern[i, j] * (sum(intern[,j]) / sum(intern[, seq(2,length(levels(data[,INTERNA]))+1,1)]))
+        result[i, paste("QF", j, sep = "")] = intern[i, j] * (sum(intern[,j]) / sum(intern[, seq(2,length(levels(data[,INTERNA]))+1,1)]))
+      }
+    }
+    
+    AcQFAi = 0
+    for (i in seq(1, nrow(intern), 1)){
+      intern[i, "QFA"] = sum(intern[i, seq(2+length(levels(data[,INTERNA])),2*length(levels(data[,INTERNA]))+1,1)])
+      AcQFAi = AcQFAi + intern[i, "QFA"]
+    }
+    
+    result["QFA"] = intern["QFA"]
+    result["QFR"] = intern["QFA"] / AcQFAi * 100
+    rm(daInter, AcQFAi, i, j, intern)
+  }
+  rm(pivot)
+  return(result)
+}    
+
+bdq.meyer = function(data, col.parcelas, col.dap, area.parcela, intervalo.classe = 5, min.dap = 5, i.licourt = 1.3){
+  
+  INTERVALO.CLASSE = intervalo.classe
+  DBH = col.dap
+  DBH.MIN = min.dap
+  PLOTS = col.parcelas
+  # alterei aqui para areaplot poder ser uma coluna do data frame
+  if(is.numeric(area.parcela) ){AREA.PLOT = area.parcela}else(AREA.PLOT = mean(data[,area.parcela],na.rm = T ) )
+  LICOURT = i.licourt
+  
+  # Remover NA
+  data = data[!is.na(data[DBH]),]
+  
+  # Calcula número de parcelas na área de estudo
+  nplots = length(unique(data[,PLOTS]))
+  
+  # Estrutura diametrica
+  
+  data[,"Classe"] = ceiling(data[,DBH] /  INTERVALO.CLASSE)
+  data[, "CentroClasse"] = data[,"Classe"] * INTERVALO.CLASSE - (INTERVALO.CLASSE / 2)
+  
+  freq = data.frame(table(data[,"Classe"]))
+  DD = data.frame(Classe = as.numeric(freq[,1]))
+  DD$CentroClasse = DD$Classe * INTERVALO.CLASSE - (INTERVALO.CLASSE / 2)
+  DD$NumIndv = freq[,2]
+  DD$IndvHectare = round(DD$NumIndv / ((AREA.PLOT/10000) * nplots), 1)
+  DD = DD[DD$CentroClasse >= DBH.MIN,]
+  rm(freq)
+  
+  # Meyer
+  meyer = lm(log(DD$IndvHectare) ~ DD$CentroClasse)
+  DD$Meyer = round(exp(predict(meyer)), 0)
+  
+  # # Mervart
+  # mervart = lm(log(DD$IndvHectare) ~ log(DD$CentroClasse))
+  # DD$Mervart = round(exp(predict(mervart)), 0)
+  
+  # Licourt atual
+  q = 0
+  for (i in seq(1, length(DD$CentroClasse)-1,1)){
+    q[i] = DD$IndvHectare[i] / DD$IndvHectare[i+1]
+  }
+  q[length(DD$CentroClasse)] = NA
+  DD$q = round(q, 1)
+  rm(q)
+  
+  # DBq base meyer
+  
+  # Calcula b1 do modelo de Meyer
+  b1 = round(log(LICOURT)/(- INTERVALO.CLASSE), 6)
+  
+  # Calcula b0 do modelo de Meyer
+  temp.b0 = DD$CentroClasse^2 * exp(b1 * DD$CentroClasse)
+  sum.temp.b0 = sum(temp.b0)
+  areaBasal = (DD$CentroClasse^2 * pi / 40000) * (DD$IndvHectare)
+  b0 = log(40000 * sum(areaBasal) / (pi * sum.temp.b0))
+  rm(temp.b0, sum.temp.b0, areaBasal)
+  
+  # Calcula a distribuição diamétrica balanceada com base no modelo de Meyer
+  DD$MeyerBalan = round(exp(b0 + b1 * DD$CentroClasse), 0)
+  
+  result = list(DD, meyer, c(b0, b1))
+  return(result)
+}
+
+p.similaridade=function(x, y, rotuloNI = "NI", indice = "both"){
+  
+  # Remover observações cuja espécie é desconhecida
+  semNI1 = x[x != rotuloNI]
+  semNI1 = x[!is.na(x)]
+  
+  # Encontrar o número de espéciue que ocorrem na parcela
+  a = length(unique(semNI1))
+  
+  semNI2 = y[y != rotuloNI]
+  
+  b = length(unique(semNI2))
+  
+  c = length(intersect(unique(semNI1), unique(semNI2)))
+  
+  SJ = round(c / (a+b-c), 2)
+  
+  SO = round(2*c/(a+b), 2)
+  
+  if(indice == "both"){
+    
+    return(c(SJ, SO))
+    
+  } else if (indice == "Sorensen"){
+    
+    return(SO)
+    
+  } else if (indice == "Jaccard"){
+    
+    return(SJ)
+    
+  } else {
+    
+    return(c(SJ, SO))
+  }
+}
+
+m.similaridade=function(data, col.especies, col.comparison, rotulo.NI = "NI", indice = "both"){
+  
+  # Remover NA
+  data = data[!is.na(data[col.especies]),]
+  data = data[!is.na(data[col.comparison]),]
+  
+  # Remover observações cuja espécie é desconhecida
+  semNI = data[data[ ,col.especies] != rotulo.NI,]
+  
+  compair = levels(data[,col.comparison])
+  
+  SO = matrix(1, nrow = length(compair), ncol = length(compair))
+  SJ = matrix(1, nrow = length(compair), ncol = length(compair))
+  for (p in seq(1, length(compair)-1,1)){
+    for (r in seq(p+1, length(compair),1)){
+      # Encontrar o número de espéciue que ocorrem na parcela
+      a = length(unique(semNI[semNI[,col.comparison] == compair[p], col.especies]))
+      
+      b = length(unique(semNI[semNI[,col.comparison] == compair[r], col.especies]))
+      
+      c = length(intersect(unique(semNI[semNI[,col.comparison] == compair[p], col.especies]),
+                           unique(semNI[semNI[,col.comparison] == compair[r], col.especies])))
+      
+      SJ[p, r] = round(c / (a+b-c), 2)
+      SJ[r, p] = round(c / (a+b-c), 2)
+      
+      SO[p, r] = round(2 * c / (a+b), 2)
+      SO[r, p] = round(2 * c / (a+b), 2)
+    }
+  }
+  if(indice == "both"){
+    
+    return(list(SJ, SO))
+    
+  } else if (indice == "Sorensen"){
+    
+    return(SO)
+    
+  } else if (indice == "Jaccard"){
+    
+    return(SJ)
+    
+  } else {
+    
+    return(list(SJ, SO))
+    
+  }
+}
+
+diversidade = function(data, col.especies, rotulo.NI = "NI", indice = NA){
+  
+  # Remover NA
+  data = data[!is.na(data[col.especies]),]
+  
+  # Remover NI
+  semNI = data[data[,col.especies]!=rotulo.NI, col.especies]
+  
+  # Calcula tabela de frequencia
+  tableFreq = table(semNI)
+  tableP = data.frame(tableFreq)
+  names(tableP) = c("especie", "freq")
+  
+  # Calcula número de indivíduos na amostra
+  #N = length(semNI)
+  N = sum(tableP$freq)
+  
+  # Calcula a proporção de cada espécie
+  tableP$p = tableP$freq / N
+  
+  # Calcula o log da proporção de cada espécie
+  tableP$lnp = log(tableP$p)
+  tableP[tableP$lnp  == "-Inf", "lnp"] = 0
+  
+  # Número de espécies amostradas
+  Sesp = length(tableP[tableP$freq > 0, "especie"])
+  
+  # Calcula Shannon
+  H = round(- sum(tableP$p * tableP$lnp), 2)
+  
+  #Calcula Simpson
+  S = round(1 - (sum(tableP$freq*(tableP$freq - 1))/(N*(N-1))), 2)
+  
+  # Diversidade Máxima
+  Hmax = round(log(length(tableP$freq[tableP$freq>0])), 2)
+  
+  # Equabilidade de Pielou
+  J = round(H / Hmax, 2)
+  
+  # Coeficiente de mistura de Jentsch
+  QM = round(Sesp / N, 2)
+  
+  if (is.na(indice)){
+    return(data.frame(Shannon = H, Simpson = S, EqMaxima = Hmax, Piellou = J, Jentsch = QM))
+  } else if (indice == "H"){
+    return(H)
+  } else if (indice == "S"){
+    return(S)
+  } else if (indice == "Hmax"){
+    return(Hmax)
+  } else if (indice == "J"){
+    return(J)
+  } else if (indice == "QM"){  
+    return(QM)
+  } else {
+    return(data.frame(Shannon = H, Simpson = S, EqMaxima = Hmax, Piellou = J, Jentsch = QM))
+  }
+}
+
+
+# Funcoes Inventario ####
+round_df <- function(x, digits) {
+  # round all numeric variables
+  # x: data frame 
+  # digits: number of digits to round
+  numeric_columns <- sapply(x, class) == 'numeric'
+  x[numeric_columns] <-  round(x[numeric_columns], digits)
+  x
+}
+
+inv_summary <- function(df,DAP, HT, VCC, area_parcela, groups, area_total,idade,VSC,Hd) {
+  
+  suppressPackageStartupMessages(require(dplyr))
+  require(lazyeval)
+  
+  if( missing(df)||is.null(df)||df==F)
+  {stop("please insert data frame")}
+  
+  if(missing(DAP)||is.null(DAP)||DAP==F||DAP=="")
+  {stop("please insert diameter variable")}
+  
+  if(missing(HT)||is.null(HT)||HT==F||HT=="")
+  {stop("please insert height variable")}
+  
+  if(missing(VCC)||is.null(VCC)||VCC==F||VCC=="")
+  {stop("please insert volume variable")}
+  
+  if(missing(area_parcela)||is.null(area_parcela)||area_parcela==F||area_parcela=="")
+  {stop("please insert sample area variable")}
+  
+  if(missing(groups)||is.null(groups)||groups==F||groups==""){groups<-NULL}
+  
+  # argumentos opcionais
+  if(missing(area_total) || is.null(area_total) || area_total==F || area_total==""   ){df$area_total<-NA; area_total <- "area_total"}
+  if(missing(idade)      || is.null(idade)      || idade==F      || idade==""        ){df$idade<-NA;      idade <- "idade"}
+  if(missing(VSC)        || is.null(VSC)        || VSC==F        || VSC==""          ){df$VSC<-NA;        VSC <- "VSC"}
+  
+  # argumentos de area podem ser numericos
+  if(is.numeric(area_parcela)){df$area_parcela <- area_parcela; area_parcela <- "area_parcela"}
+  if(is.numeric(area_total  )){df$area_total   <- area_total; area_total     <- "area_total"}
+  
+  
+  if(missing(Hd)||is.null(Hd)||Hd==F||Hd=="") { # calculo da altura dominante
+    
+    if(  "HD" %in% names(df) ){ df$HD <- NULL }
+    
+    if(is.null(groups)){
+      x <-  suppressMessages(   # remove mensagens do dplyr
+        df %>% 
+          select_(ht = HT) %>% 
+          top_n(2) %>% # seleciona as duas maiores arvores
+          summarise(HD = mean(ht) ) %>% 
+          cbind(df) # como nao ha grupos, usamos cbind
+      )    }else{
+        x <-  suppressMessages(
+          
+          df %>% 
+            group_by_(.dots = groups) %>% 
+            select_(ht = HT) %>% 
+            top_n(2) %>% 
+            summarise(HD = mean(ht) ) %>% 
+            full_join(df) # como ha grupos, usamos join
+          
+        )
+      }
+    
+  } else{ x <- df %>% rename_(HD = Hd) }
+  
+  
+  x %>% 
+    group_by_(.dots = groups) %>% 
+    mutate_(.dots = setNames(list( interp(~ pi * DAP^2 / 40000, DAP = as.name(DAP) ) ), nm = "AS" ) ) %>% 
+    summarise_(
+      .dots =  
+        setNames(  list(  
+          interp(~ round(mean(as.numeric(idade), na.rm=T) ), idade = as.name(idade)) ,
+          interp(~ mean(area_total, na.rm=T), area_total = as.name(area_total)) ,
+          interp(~ mean(area_parcela, na.rm=T), area_parcela = as.name(area_parcela)) ,
+          interp(~ round(mean(DAP, na.rm=T), 2), DAP = as.name(DAP) ) ,
+          ~ round(sqrt(mean(AS, na.rm=T) * 40000 / pi), 2)  ,
+          interp(~round(mean(HT, na.rm=T), 2), HT = as.name(HT) ),
+          ~ round(mean(HD), 2),
+          ~ round(sum(AS, na.rm=T) * 10000/AREA_PARCELA, 4),
+          interp(~round(sum(VCC, na.rm=T) * 10000/ AREA_PARCELA, 4 ), VCC = as.name(VCC), AREA_PARCELA = as.name("AREA_PARCELA") ),
+          interp(~round(sum(VSC, na.rm=T) * 10000/ AREA_PARCELA, 4 ), VSC = as.name(VSC), AREA_PARCELA = as.name("AREA_PARCELA") )
+          
+        ), #list 
+        nm = c("IDADE","AREA_TOTAL","AREA_PARCELA", "DAP", "q", "HT", "HD","G", "VCC","VSC" ) 
+        )#setnames 
+    ) %>% #sumarise 
+    na_if(0) %>% # substitui 0 por NA
+    select_if(Negate(anyNA)) %>%  # remove variaveis que nao foram informadas (argumentos opicionais nao inseridos viram NA)
+    as.data.frame
+}
+
+acs <- function(df, area_total, area_parcela, VCC, idade, grupos, alpha = 0.05, Erro = 10, casas_decimais=4, pop="inf",tidy=T){
+  
+  suppressPackageStartupMessages(require(dplyr))
+  require(tidyr)
+  require(lazyeval)
+  
+  if(is.null(grupos)||missing(grupos)||grupos==FALSE||grupos==""){grupos=NULL}
+  
+  if(is.null(df)||missing(df)||df==F||df=="")
+  {stop("Escolha o data frame") }
+  
+  if(is.null(area_total)||missing(area_total)||area_total==F||area_total=="")
+  {stop("Escolha a variavel Area total (ha) ") }
+  
+  if(is.null(area_parcela)||missing(area_parcela)||area_parcela==F||area_parcela=="")
+  {stop("Escolha a variavel Area da parcela (m2) ") }
+  
+  if(is.null(VCC)||missing(VCC)||VCC==F||VCC=="")
+  {stop("Escolha a variavel Volume (m3)") }
+  
+  # argumentos opcionais
+  if(is.null(idade)||missing(idade)||idade==F||idade==""){df$idade<-NA; idade <- "idade"}
+  
+  # argumentos de area podem ser numericos
+  if(is.numeric(area_parcela)){df$area_parcela <- area_parcela; area_parcela <- "area_parcela"}
+  if(is.numeric(area_total  )){df$area_total   <- area_total; area_total     <- "area_total"}
+  
+  
+  
+  x_ <-df %>%
+    na_if(0) %>%
+    group_by_(.dots = grupos) %>%
+    summarise_(
+      .dots = 
+        setNames( 
+          list( 
+            interp(~ mean(idade), idade = as.name(idade) ),
+            interp(~ n() ),
+            interp(~ mean(area_total) / ( mean(area_parcela)/10000 ), area_total = as.name(area_total), area_parcela = as.name(area_parcela)  ),
+            interp(~ sd(VCC) / mean(VCC) * 100, VCC = as.name(VCC) ),
+            ~ qt(alpha/2, df = n-1, lower.tail = FALSE),
+            ~ ifelse(pop=="inf", 
+                     qt(alpha/2, df = ceiling( t^2 * CV^2 / Erro^2) - 1, lower.tail = FALSE)  ,
+                     qt(alpha/2, df = ceiling( t^2 * CV^2 / ( Erro^2 +(t^2 * CV^2 / N) ) ) - 1, lower.tail = FALSE) ) ,
+            ~ ifelse(pop=="inf",
+                     ceiling( t_rec ^2 * CV^2 / Erro^2 ) ,
+                     ceiling( t_rec ^2 * CV^2 / ( Erro^2 +(t_rec^2 * CV^2 / N) ) ) ),
+            interp(~ mean(VCC, na.rm=T), VCC = as.name(VCC) ),
+            interp(~ ifelse(pop=="inf", 
+                            sqrt( var(VCC)/n ), 
+                            sqrt( var(VCC)/n  * (1 - (n/N)) ) ) , 
+                   VCC = as.name(VCC), n = as.name("n"), N = as.name("N") ),
+            ~ Sy * t ,
+            ~ Erroabs / Y * 100,
+            ~ Y * N,
+            ~ Erroabs * N,
+            ~ Y - Erroabs,
+            ~ Y + Erroabs,
+            ~ Yhat - Erro_Total,
+            ~ Yhat + Erro_Total
+          ), 
+          nm=c("idade", "n","N", "CV","t","t_rec","n_recalc" ,"Y","Sy","Erroabs" ,"Erroperc","Yhat", "Erro_Total","IC_ha_Inf" ,"IC_ha_Sup","IC_Total_inf","IC_Total_Sup")
+        ) 
+    ) %>%
+    na_if(0) %>% # substitui 0 por NA
+    select_if(Negate(anyNA) ) %>%  # remove variaveis que nao foram informadas (argumentos opicionais nao inseridos viram NA)
+    round_df(casas_decimais)
+  
+  x <- x_ %>% 
+    plyr::rename(c( "idade"        = "Idade (meses)"                  , 
+                    "n"            = "Numero de Parcelas (n)"         ,
+                    "N"            = "Numero de Parcelas cabiveis (N)", 
+                    "CV"           = "Coeficiente de Variancia (CV)"  ,
+                    "t"            = "t-student"                      ,
+                    "t_rec"        = "t recalculado"                  ,
+                    "n_recalc"     = "n recalculado"                  ,
+                    "Y"            = "Media geral (Y)"                ,
+                    "Sy"           = "Erro-Padrao da Media (Sy)"      ,
+                    "Erroabs"      = "Erro Absoluto"                  ,
+                    "Erroperc"     = "Erro Relativo (%)"              ,
+                    "Yhat"         = "Volume total estimado (Yhat)"   , 
+                    "Erro_Total"   = "Erro Total"                     ,
+                    "IC_ha_Inf"    = "IC (m³/ha) Inferior"            ,
+                    "IC_ha_Sup"    = "IC (m³/ha) Superior"            ,
+                    "IC_Total_inf" = "IC Total (m³) inferior"         ,
+                    "IC_Total_Sup" = "IC Total (m³) Superior")        , 
+                 warn_missing = F) # nao gera erro mesmo quando se renomeia variaveis inexistentes
+  
+  if(tidy==F)
+  {
+    return(x_)
+  } 
+  else if(tidy==T & is.null(grupos) )
+  {
+    x <- data.frame(Variaveis = names(x), Valores = t(x) )
+    rownames(x) <- NULL
+    # ou
+    # x <- tibble::rownames_to_column(data.frame("Valores"=t(x)) , "Variaveis" ) 
+    
+    return(x)
+  }
+  else
+  {
+    vec1 <- names(x)[! names(x) %in% grupos ]
+    vec2 <- grupos[length(grupos)]
+    vec3 <- grupos[grupos!=vec2]
+    
+    y <- x %>%
+      gather_("Variaveis","value", vec1, factor_key=T ) %>% 
+      arrange_( grupos ) %>% 
+      spread_(vec2,"value",sep="")%>%
+      group_by_(.dots=vec3)
+    return(y)
+    
+  }
+  
+}
+
+ace <- function(df, area_estrato, area_parcela, VCC, grupos, idade, alpha = 0.05, Erro = 10, casas_decimais = 4, pop="inf", tidy=T ){
+  
+  suppressPackageStartupMessages(require(dplyr))
+  require(tidyr)
+  require(lazyeval)
+  
+  if(missing(df)||is.null(df)||df==F||df=="")
+  {stop("Escolha o data frame") }
+  
+  if(missing(area_estrato)||is.null(area_estrato)||area_estrato==F||area_estrato=="")
+  {stop("Escolha a variavel Area do Estrato (ha)") }
+  
+  if(missing(area_parcela)||is.null(area_parcela)||area_parcela==F||area_parcela=="")
+  {stop("Escolha a variavel Area da parcela (m2)") }
+  
+  if(missing(VCC)||is.null(VCC)||VCC==F||VCC=="")
+  {stop("Escolha a variavel Volume (m3)") }
+  
+  if(missing(grupos)||is.null(grupos)||is.na(grupos)||grupos==F||grupos=="")
+  {stop("Escolha a(s) variavel(is) de estratificacao") }
+  
+  # argumentos opcionais
+  if(missing(idade)||is.null(idade)||idade==F||idade=="") {df$idade<-NA; idade<-"idade"}
+  
+  # argumentos de area podem ser numericos
+  if(is.numeric(area_parcela)){df$area_parcela <- area_parcela; area_parcela <- "area_parcela"}
+  if(is.numeric(area_estrato)){df$area_estrato <- area_estrato; area_estrato <- "area_estrato"}
+  
+  
+  x_ <- df %>%
+    na_if(0) %>%
+    group_by_(.dots = grupos) %>%
+    summarise_(.dots = setNames( list( interp( ~ mean(area_estrato) / (mean(area_parcela)/10000), area_estrato = as.name(area_estrato), area_parcela = as.name(area_parcela) ) ), nm="Nj" ) ) %>%
+    summarise(N  = sum(Nj) ) %>% 
+    ungroup %>%
+    select(N) %>%
+    cbind(data.frame(df),.) %>% 
+    mutate_(.dots = setNames( list( interp( ~ area_estrato / ( area_parcela/10000 ), area_estrato = as.name(area_estrato), area_parcela = as.name(area_parcela) ) ), nm="Nj" ) ) %>%
+    group_by_(.dots = grupos) %>%
+    summarise_(.dots = 
+                 setNames( 
+                   list(
+                     interp(~ mean(idade), idade = as.name(idade) ),
+                     interp(~ n() ) ,
+                     ~ mean(Nj),
+                     ~ mean(N),
+                     ~ Nj/N,
+                     interp(~ sum(VCC), VCC= as.name(VCC) ),
+                     interp(~ sum(VCC^2), VCC= as.name(VCC) ),
+                     interp(~ mean(VCC, na.rm =T), VCC= as.name(VCC) ),
+                     interp(~ Pj * var(VCC, na.rm=T), Pj = as.name("Pj"), VCC = as.name(VCC) ),
+                     interp(~ Pj * sd(VCC, na.rm=T), Pj = as.name("Pj"), VCC = as.name(VCC) ),
+                     ~ Pj * Yj
+                   ), 
+                   nm=c("IDADE", "nj", "Nj", "N", "Pj", "Eyj", "Eyj2", "Yj", "Pj_Sj2", "Pj_Sj", "Pj_Yj")
+                 ) 
+    ) %>%
+    ungroup %>%
+    mutate( EPj_Sj2  =   sum(Pj_Sj2), 
+            EPj_Sj   =   sum(Pj_Sj), 
+            Y        =   sum(Pj_Yj), # media estratificada (ponderada)     
+            CV       = EPj_Sj / Y * 100, # Coeficiente de variancia
+            t        = qt(alpha/2, df = sum(nj)-1, lower.tail = FALSE),     # a seguir, o t sera calculado utilizando o n calculado, de forma direta
+            t_rec    = ifelse(pop=="inf",
+                              qt(alpha/2, df = ceiling( t^2 * EPj_Sj^2 / (Erro*Y/100)^2 )-1, lower.tail = FALSE),
+                              qt(alpha/2, df = ceiling( t^2 * EPj_Sj^2 / ( (Erro*Y/100)^2 + (t^2 * EPj_Sj2 / N )  ) )-1, lower.tail = FALSE)
+            ),
+            n_recalc = ifelse(pop=="inf",
+                              ceiling( t_rec^2 * EPj_Sj^2 / (Erro*Y/100)^2 ),
+                              ceiling( t_rec^2 * EPj_Sj^2 / ( (Erro*Y/100)^2 + (t_rec^2 * EPj_Sj2 / N )  ) ) 
+            ), # agora fazemos o recalculo do n, utilizando o t correto
+            nj_otimo = ceiling(n_recalc*Pj_Sj/EPj_Sj), # por estrato utilizando o metodo de Neyman
+            n_otimo  = sum(nj_otimo), # n calculado total
+            Yhatj    = Nj * Yj )  %>% # producao total por estrato
+    na_if(0) %>% # substitui 0 por NA
+    select_if(Negate(anyNA) ) %>%  # remove variaveis que nao foram informadas (argumentos opicionais nao inseridos viram NA)
+    round_df(casas_decimais)  
+  
+  x <- x_ %>% 
+    plyr::rename(
+      c("IDADE" = "Idade (meses)",
+        "nj" = "numero de amostras / estrato (nj)" ,
+        "Nj" = "Numero de amostras cabiveis / estrato (Nj)",
+        "N" = "Numero de amostras cabiveis (N)", 
+        "Pj" = "Proporcao Nj/N (Pj)",
+        "Eyj" = "Somatorio do volume por estrato (Eyj)", 
+        "Eyj2" = "Soma quadratica do volume por estrato (Eyj2)", 
+        "Yj" = "Media do volume por estrato (Yj)", 
+        "Pj_Sj2" = "PjSj2", 
+        "Pj_Sj" = "PjSj", 
+        "Pj_Yj" = "PjYj",
+        "EPj_Sj2" = "EPjSj2",
+        "EPj_Sj" = "EPjSj", 
+        "Y" = "Media Estratificada (Y)",
+        "CV" = "Coeficiente de Variancia (CV)", 
+        "t" = "t-student", 
+        "t_rec" = "t recalculado", 
+        "n_recalc" = "n recalculado",
+        "nj_otimo" = "Numero otimo de parcelas por estrato (nj otimo)", 
+        "n_otimo" = "numero otimo de parcelas (n otimo)", 
+        "Yhatj" = "Producao total por estrato (Yhatj)"  ),
+      warn_missing = F)
+  
+  
+  
+  
+  y_ <- x_ %>%
+    group_by_(.dots=grupos[-length(grupos)] ) %>%
+    summarise(t            = mean(t),
+              Sy           = ifelse(pop=="inf",
+                                    sqrt(sum(Pj_Sj)^2 / sum(nj) ),
+                                    sqrt(sum(Pj_Sj) ^2 / sum(nj) - (mean(EPj_Sj2) / mean(N) )  )
+              ), # Erro-padrao da media
+              Y            = sum(Pj_Yj), # media de vcc estratificada (ponderada) 
+              Erroabs      = Sy * t, # Erro Absoluto
+              Erroperc     = Erroabs / Y * 100, # Erro percentual
+              Yhat         = sum(Nj) * Y, # Volume Total
+              Erro_Total   = Erroabs * sum(Nj), # Erro Total
+              IC_ha_Inf    = Y - Erroabs, # Intervalo de confianca por ha inferior
+              IC_ha_Sup    = Y + Erroabs, # Intervalo de confianca por ha superior
+              IC_Total_inf = Yhat - Erro_Total, # Intervalo de confianca total inferior
+              IC_Total_Sup = Yhat + Erro_Total    ) %>% # Intervalo de confianca total superior)
+    round_df(casas_decimais)  
+  
+  
+  y <- y_ %>% 
+    plyr::rename(
+      c("t" = "t-student",
+        "Sy" = "Erro-Padrao da Media (Sy)",
+        "Y" = "Media estratificada (Y)",
+        "Erroabs" = "Erro Absoluto" ,
+        "Erroperc" = "Erro Relativo (%)",
+        "Yhat" = "Volume total estimado (Yhat)", 
+        "Erro_Total" = "Erro Total",
+        "IC_ha_Inf" = "IC (m³/ha) Inferior" ,
+        "IC_ha_Sup" = "IC (m³/ha) Superior",
+        "IC_Total_inf" = "IC Total (m³) inferior",
+        "IC_Total_Sup" = "IC Total (m³) Superior"),
+      warn_missing = F)
+  
+  
+  if(tidy==F){
+    
+    z <- list(Tabela1 = as.data.frame(x_), Tabela2 = as.data.frame(y_))
+    
+    return(z)
+    
+  }else{
+    
+    vec1 <- names(x)[! names(x) %in% grupos ]
+    vec2 <- grupos[length(grupos)]
+    vec3 <- grupos[grupos!=vec2]
+    vec4 <- names(y)[! names(y) %in% vec3 ] 
+    vec5 <- vec3[length(vec3)]
+    vec6 <- vec3[vec3!=vec5]
+    
+    x <-  x %>%
+      gather_("Variaveis","value", vec1, factor_key=T) %>% 
+      arrange_(grupos) %>% 
+      spread_(vec2,"value",sep="") %>%
+      group_by_(.dots=vec3)
+    
+    if(length(grupos)!=1 ){
+      
+      y <- y %>%
+        gather_("Variaveis","value", vec4, factor_key=T) %>% 
+        arrange_(vec3) %>% 
+        spread_(vec5,"value") %>%
+        group_by_(.dots=vec6)
+      
+    } else{
+      
+      y <- y %>%
+        gather_("Variaveis","value", vec4, factor_key=T)
+      
+      
+    }
+    
+    z <- list(Tabela1 = as.data.frame(x), Tabela2 = as.data.frame(y))
+    
+    return(z) 
+    
+  }
+  
+  
+  
+}
+
+as_diffs <- function(df, area_total, area_parcela, VCC, idade, grupos, alpha = 0.05, Erro = 10, casas_decimais=4, tidy=T ) {
+  
+  suppressPackageStartupMessages(require(dplyr))
+  require(tidyr)
+  require(lazyeval)
+  
+  if(missing(grupos) || is.null(grupos) || grupos==F || grupos==""){grupos=NULL}
+  
+  if(missing(df)||is.null(df)||df==F||df=="")
+  {stop("Escolha o data frame") }
+  
+  if(missing(area_total)||is.null(area_total)||area_total==F||area_total=="")
+  {stop("Escolha a variavel Area total (ha) ") }
+  
+  if(missing(area_parcela)||is.null(area_parcela)||area_parcela==F||area_parcela=="")
+  {stop("Escolha a variavel Area da parcela (m2) ") }
+  
+  if(missing(VCC)||is.null(VCC)||VCC==F||VCC=="")
+  {stop("Escolha a variavel Volume (m3)") }
+  
+  # argumentos opcionais
+  if(missing(idade)||is.null(idade)||idade==F||idade==""){df$idade<-NA; idade <- "idade"}
+  
+  # argumentos de area podem ser numericos
+  if(is.numeric(area_parcela)){df$area_parcela <- area_parcela; area_parcela <- "area_parcela"}
+  if(is.numeric(area_total  )){df$area_total   <- area_total; area_total     <- "area_total"}
+  
+  
+  x_ <- df %>%
+    group_by_(.dots = grupos) %>%
+    summarise_(
+      .dots = 
+        setNames( 
+          list( 
+            interp(~ mean(idade), idade = as.name(idade) ),
+            interp(~ n() ),
+            interp(~ mean(area_total) / ( mean(area_parcela)/10000 ), area_total = as.name(area_total), area_parcela = as.name(area_parcela)  ),
+            interp(~ sd(VCC) / mean(VCC) * 100, VCC = as.name(VCC) ),
+            ~ qt(alpha/2, df = n-1, lower.tail = FALSE),
+            interp(~ mean(VCC, na.rm=T), VCC = as.name(VCC) ),
+            interp(~ sqrt( (sum(diff(VCC)^2) / (2 * n * (n-1) ) ) * ((N-n)/N) ) , VCC = as.name(VCC), n = as.name("n"), N = as.name("N") ),
+            ~ Sy * t ,
+            ~ Erroabs / Y * 100,
+            ~ Y * N,
+            ~ Erroabs * N,
+            ~ Y - Erroabs,
+            ~ Y + Erroabs,
+            ~ Yhat - Erro_Total,
+            ~ Yhat + Erro_Total
+          ), 
+          nm=c("idade", "n","N", "CV","t","Y","Sy","Erroabs" ,"Erroperc","Yhat", "Erro_Total","IC_ha_Inf" ,"IC_ha_Sup","IC_Total_inf","IC_Total_Sup")
+        ) 
+    ) %>%
+    na_if(0) %>% # substitui 0 por NA
+    select_if(Negate(anyNA) ) %>%  # remove variaveis que nao foram informadas (argumentos opicionais nao inseridos viram NA)
+    round_df(casas_decimais)
+  
+  
+  x <- x_ %>% 
+    plyr::rename(c( "idade"        = "Idade (meses)"                  , 
+                    "n"            = "Numero de Parcelas (n)"         ,
+                    "N"            = "Numero de Parcelas cabiveis (N)", 
+                    "CV"           = "Coeficiente de Variancia (CV)"  ,
+                    "t"            = "t-student"                      ,
+                    "t_rec"        = "t recalculado"                  ,
+                    "n_recalc"     = "n recalculado"                  ,
+                    "Y"            = "Media geral (Y)"                ,
+                    "Sy"           = "Erro-Padrao da Media (Sy)"      ,
+                    "Erroabs"      = "Erro Absoluto"                  ,
+                    "Erroperc"     = "Erro Relativo (%)"              ,
+                    "Yhat"         = "Volume total estimado (Yhat)"   , 
+                    "Erro_Total"   = "Erro Total"                     ,
+                    "IC_ha_Inf"    = "IC (m³/ha) Inferior"            ,
+                    "IC_ha_Sup"    = "IC (m³/ha) Superior"            ,
+                    "IC_Total_inf" = "IC Total (m³) inferior"         ,
+                    "IC_Total_Sup" = "IC Total (m³) Superior")        , 
+                 warn_missing = F) # nao gera erro mesmo quando se renomeia variaveis inexistentes
+  
+  
+  
+  if(tidy==F)
+  {
+    return(x_)
+  } 
+  else if(tidy==T & is.null(grupos) )
+  {
+    x <- data.frame(Variaveis = names(x), Valores = t(x) )
+    rownames(x) <- NULL
+    # ou
+    # x <- tibble::rownames_to_column(data.frame("Valores"=t(x)) , "Variaveis" ) 
+    
+    return(x)
+  }
+  else
+  {
+    
+    vec1 <- names(x)[! names(x) %in% grupos ]
+    vec2 <- grupos[length(grupos)]
+    vec3 <- grupos[grupos!=vec2]
+    
+    y <- x %>%
+      gather_("Variaveis","value", vec1, factor_key=T ) %>% 
+      arrange_( grupos ) %>% 
+      spread_(vec2,"value",sep="")%>%
+      group_by_(.dots=vec3)
+    
+    return(y)
+  }
+  
+  
+  
+}
+
+
+# vectors for names ####
+
+especies_names <- c("scientific.name","Scientific.Name","SCIENTIFIC.NAME" ,"scientific_name", "Scientific_Name","SCIENTIFIC_NAME","nome.cientifico", "Nome.Cientifico","NOME.CIENTIFICO","nome_cientifico", "Nome_Cientifico","NOME_CIENTIFICO")
+parcelas_names <- c("transect", "Transect", "TRNASECT", "transect.code","Transect.Code","TRANSECT.CODE","transect_code","Transect_Code","TRANSECT_CODE","parcela", "Parcela","PARCELA","cod.parcela","Cod.Parcela","COD.PARCELA", "cod_parcela","Cod_Parcela","COD_PARCELA")
+est.vertical_names <- c("canopy", "canopy_09")
+est.interno_names <- c("light", "light_09")
+
+
+DAP_names <- c("DAP","Dap","dap", "dbh", "Dbh","DBH","DBH_11")
+HT_names <- c("HT_EST", "HT", "Ht", "ht","Htot","ALTURA","Altura","Altura_Total", "ALTURA_TOTAL")
+VCC_names <- c("VCC","Vcc", "vcc", "VOL", "Vol", "VOLUME")
+area_parcela_names <- c("AREA_PARCELA","Area_Parcela","area_parcela", "AREAPARCELA", "areaparcela", "transect.area", "Transect.Area", "TRANSECT.AREA","transect_area","Transect_Area","TRANSECT_AREA")
+area_total_names <- c("AREA_TOTAL", "AREATOTAL", "area_total", "areatotal","AREA_TALHAO", "AREATALHAO", "area_talhao", "areatalhao","total.area","Total.Area","TOTAL.AREA","total_area","Total_Area","TOTAL_AREA")
+idade_names <- c("IDADE", "Idade","idade")
+VSC_names <- c("VSC","Vsc", "vsc")
+HD_names <- c("HD", "Hd", "hd", "ALTURA_DOMINANTE", "ALT_DOM")
+grupos_names <- c(c("TALHAO", "PARCELA"), c("area.code", "transect"))
+estratos_names <- c("TALHAO", "Talhao", "talhao","COD_TALHAO","Cod_Talhao","cod_talhao", "COD.TALHAO", "Cod.Talhao","cod.talhao", "area.code", "Area.Code","AREA.CODE", "area_code","Area_Code","AREA_CODE")
+
+# Server ####
+
 shinyServer(function(input, output, session) {
   
   
-  outVar <- reactive({ # iremos salvar os nomes das variaveis do objeto carregado em uma funcao reativa
-    
-    if(input$Load == 0){return()} # se o botao load nao for pressionado, retornar nada
-    inFile <- input$file1 
-    if(is.null(inFile)){return(NULL)} # se o arquivo nao for carregado, retornar null
-    
-    # Carregar o arquivo com base em input
-    if(input$excel==F)
-    {
-      mydata <- read.csv(inFile$datapath, header=TRUE, sep=input$sep, dec=input$dec)
-      
-    }else {
-      mydata <- read.xlsx(inFile$datapath, 1)
-      
-    }
-    names(mydata) # nomes das variaveis do arquivo carregado
-  })  
+  # Importar dados ####
   
-  observe({ # Com observe iremos atualizar a lista de variaveis em selectizeInput
-    
-    #agregacao ####
-    
-    updateSelectizeInput( # funcao que atualiza um SelectizeInput
-      session, # sessao
-      "col.especies", # Id do SelecizeInput que sera atualizado
-      choices = outVar()) # lista de opcoes. No caso, nomes das variaveis do arquivo carregado pelo usuario
-    
-    updateSelectizeInput( # funcao que atualiza um SelectizeInput
-      session, # sessao
-      "col.parcelas", # Id do SelecizeInput que sera atualizado
-      choices = outVar()) # lista de opcoes. No caso, nomes das variaveis do arquivo carregado pelo usuario
-    
-    
-    # ACS ####
-    
-    updateSelectizeInput( # funcao que atualiza um SelectizeInput
-      session, # sessao
-      "idadeacs", # Id do SelecizeInput que sera atualizado
-      choices = outVar()) # lista de opcoes. No caso, nomes das variaveis do arquivo carregado pelo usuario
-    
-    updateSelectizeInput( # funcao que atualiza um SelectizeInput
-      session, # sessao
-      "area_totalacs", # Id do SelecizeInput que sera atualizado
-      choices = outVar()) # lista de opcoes. No caso, nomes das variaveis do arquivo carregado pelo usuario
-    
-    updateSelectizeInput( # funcao que atualiza um SelectizeInput
-      session, # sessao
-      "area_parcelaacs", # Id do SelecizeInput que sera atualizado
-      choices = outVar()) # lista de opcoes. No caso, nomes das variaveis do arquivo carregado pelo usuario
-    
-    updateSelectizeInput( # funcao que atualiza um SelectizeInput
-      session, # sessao
-      "VCCacs", # Id do SelecizeInput que sera atualizado
-      choices = outVar()) # lista de opcoes. No caso, nomes das variaveis do arquivo carregado pelo usuario
-    
-    updateSelectizeInput( # funcao que atualiza um SelectizeInput
-      session, # sessao
-      "gruposacs", # Id do SelecizeInput que sera atualizado
-      choices = outVar()) # lista de opcoes. No caso, nomes das variaveis do arquivo carregado pelo usuario
-    
-    # ACE ####
-    
-    updateSelectizeInput( # funcao que atualiza um SelectizeInput
-      session, # sessao
-      "idadeace", # Id do SelecizeInput que sera atualizado
-      choices = outVar()) # lista de opcoes. No caso, nomes das variaveis do arquivo carregado pelo usuario
-    
-    updateSelectizeInput( # funcao que atualiza um SelectizeInput
-      session, # sessao
-      "area_estratoace", # Id do SelecizeInput que sera atualizado
-      choices = outVar()) # lista de opcoes. No caso, nomes das variaveis do arquivo carregado pelo usuario
-    
-    updateSelectizeInput( # funcao que atualiza um SelectizeInput
-      session, # sessao
-      "area_parcelaace", # Id do SelecizeInput que sera atualizado
-      choices = outVar()) # lista de opcoes. No caso, nomes das variaveis do arquivo carregado pelo usuario
-    
-    updateSelectizeInput( # funcao que atualiza um SelectizeInput
-      session, # sessao
-      "VCCace", # Id do SelecizeInput que sera atualizado
-      choices = outVar()) # lista de opcoes. No caso, nomes das variaveis do arquivo carregado pelo usuario
-    
-    updateSelectizeInput( # funcao que atualiza um SelectizeInput
-      session, # sessao
-      "gruposace", # Id do SelecizeInput que sera atualizado
-      choices = outVar()) # lista de opcoes. No caso, nomes das variaveis do arquivo carregado pelo usuario
-    
-    
-    
-    
-    
-    # ACS ####
-    
-    updateSelectizeInput( # funcao que atualiza um SelectizeInput
-      session, # sessao
-      "idadeas", # Id do SelecizeInput que sera atualizado
-      choices = outVar()) # lista de opcoes. No caso, nomes das variaveis do arquivo carregado pelo usuario
-    
-    updateSelectizeInput( # funcao que atualiza um SelectizeInput
-      session, # sessao
-      "area_totalas", # Id do SelecizeInput que sera atualizado
-      choices = outVar()) # lista de opcoes. No caso, nomes das variaveis do arquivo carregado pelo usuario
-    
-    updateSelectizeInput( # funcao que atualiza um SelectizeInput
-      session, # sessao
-      "area_parcelaas", # Id do SelecizeInput que sera atualizado
-      choices = outVar()) # lista de opcoes. No caso, nomes das variaveis do arquivo carregado pelo usuario
-    
-    updateSelectizeInput( # funcao que atualiza um SelectizeInput
-      session, # sessao
-      "VCCas", # Id do SelecizeInput que sera atualizado
-      choices = outVar()) # lista de opcoes. No caso, nomes das variaveis do arquivo carregado pelo usuario
-    
-    updateSelectizeInput( # funcao que atualiza um SelectizeInput
-      session, # sessao
-      "gruposas", # Id do SelecizeInput que sera atualizado
-      choices = outVar()) # lista de opcoes. No caso, nomes das variaveis do arquivo carregado pelo usuario
-    
-  })
-  
-  newData <- reactive({ # Criamos uma nova funcao reactive. este sera o objeto filtrado, utilizado nos calculos
+  rawData <- reactive({ # Criamos uma nova funcao reactive. este sera o objeto filtrado, utilizado nos calculos
     
     if(input$Load==0){return()} # se o botao load nao for pressionado(==0), retornar nada
     else(inFile <- input$file1) # caso contrario, salvar o caminho do arquivo carregado em inFile
@@ -563,60 +1006,90 @@ shinyServer(function(input, output, session) {
     
   })
   
-  tabagregate <- reactive({
-    
-    dados <- newData()
-    
-    x <- agregacao(dados, input$col.especies, input$col.parcelas, "NI")
-    
-    x
-  })
-  
-  tabacs <- reactive({
-    
-    dados <- newData() 
-    
-    x <-     acs(dados, grupos = input$gruposacs, input$idadeacs, input$area_totalacs, input$area_parcelaacs , input$VCCacs, pop=input$popacs, alpha = input$alphaacs, Erro = input$erroacs, casas_decimais = input$cdacs, tidy=input$tidyacs)
-    
-    x
-    
-  })
-  
-  tabace1 <- reactive({
-    
-    dados <- newData() 
-    x <- ace(dados, grupos = input$gruposace, input$idadeace, input$area_estratoace, input$area_parcelaace , input$VCCace, pop=input$popace, alpha = input$alphaace, Erro = input$erroace, casas_decimais = input$cdace, tidy=input$tidyace)[[1]]
-    x
-    
-  })
-  
-  tabace2 <- reactive({
-    
-    dados <- newData() 
-    x <- ace(dados, grupos = input$gruposace, input$idadeace, input$area_estratoace, input$area_parcelaace , input$VCCace, pop=input$popace, alpha = input$alphaace, Erro = input$erroace, casas_decimais = input$cdace, tidy=input$tidyace)[[2]]
-    x
-    
-  })
-  
-  tabas <- reactive({
-    
-    
-    dados <- newData()
-    
-    x <- as_diffs(dados, grupos = input$gruposas, input$idadeas, input$area_totalas, input$area_parcelaas , input$VCCas, alpha = input$alphaas, Erro = input$erroas, casas_decimais = input$cdas, tidy=input$tidyas)
-    
-    x
-  }) 
-  
-  output$data <- renderDataTable({ # renderizamos uma DT::DataTable
+  output$rawdata <- renderDataTable({ # renderizamos uma DT::DataTable
     
     # salvamos a funcao newData, que contem o arquivo carregado pelo usuario em um objeto
-    data <- newData() 
+    data <- rawData() 
     
     datatable(data) # Criamos uma DT::datatable com base no objeto
     
     # Este arquivo e reativo, e ira se alterar caso o usuario
     # aperte o botao input$columns
+    
+  })
+  
+  # Agregacao ####
+  
+  tabagregate <- reactive({
+    
+    if(input$Loadagreg){
+      
+    dados <- rawData()
+    
+    x <- agregacao(data         =  dados, 
+                   col.especies = input$col.especiesagreg, 
+                   col.parcelas = input$col.parcelasagreg, 
+                   rotulo.NI    = input$rotutuloNIagreg  )
+    
+    x
+    }
+    
+  })
+  
+  output$selec_especiesagreg <- renderUI({
+    
+    data <- rawData()
+    
+    
+    selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
+      "col.especiesagreg", # Id
+      "Selecione as especies", # nome que sera mostrado na UI
+      choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
+      selected = especies_names,     
+      options = list(
+        placeholder = 'Selecione uma variavel abaixo'#,
+        #onInitialize = I('function() { this.setValue(""); }')
+      ) # options    
+      )
+    
+  })
+  
+  output$selec_parcelasagreg <- renderUI({
+    
+    data <- rawData()
+    
+    selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
+      "col.parcelasagreg", # Id
+      "Selecione as parcelas", # nome que sera mostrado na UI
+      choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
+      selected = parcelas_names,     
+      options = list(
+        placeholder = 'Selecione uma variavel abaixo'#,
+        #onInitialize = I('function() { this.setValue(""); }')
+      ) # options    
+      )
+    
+  })
+  
+  output$selec_rotuloNIagreg <- renderUI({
+    
+    dados <- rawData()
+    
+    switch(input$CBagreg,
+           "Manualmente" = textInput("rotutuloNIagreg", 
+                                   label = "Rotulo:", 
+                                   value = "NI"),
+           
+           "lista de especies" = selectizeInput("rotutuloNIagreg",
+                                                label = "Rotulo:",
+                                                choices = levels(as.factor(dados[,input$col.especiesagreg])),
+                                                options = list(
+                                                  placeholder = 'Selecione uma especie abaixo',
+                                                  onInitialize = I('function() { this.setValue(""); }')
+                                                ) # options    
+                                                )# selectize
+           )
+    
     
   })
   
@@ -628,11 +1101,901 @@ shinyServer(function(input, output, session) {
       
       datatable( agregdt,
                  options = list(searching = T,
-                                paging=T )  ) 
-      }
+                                paging=F )  ) 
+    }
     
   }) 
   
+  # Estrutura ####
+  
+  # funcao estrutura
+  tabestrutura <- reactive({
+    
+    if(input$Loadestr){
+      
+      dados <- rawData()
+      
+      x <- estrutura(data             = dados, 
+                     col.especies     = input$col.especiesestr,
+                     col.dap          = input$col.dapestr,
+                     col.parcelas     = input$col.parcelasestr,
+                     area.parcela     = input$area.parcelaestr,
+                     est.vertical     = input$est.verticalestr,
+                     est.interno      = input$est.internoestr,
+                     nao.identificada = input$rotutuloNIestr  )
+      
+      x
+    }
+    
+  })
+  
+  # UI
+  output$selec_especiesestr <- renderUI({
+    
+    data <- rawData()
+
+    selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
+      "col.especiesestr", # Id
+      "Selecione as especies", # nome que sera mostrado na UI
+      choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
+      selected = especies_names,     
+      options = list(
+        placeholder = 'Selecione uma variavel abaixo'#,
+        #onInitialize = I('function() { this.setValue(""); }')
+      ) # options    
+    )
+    
+  })
+  
+  output$selec_dapestr <- renderUI({
+    
+    data <- rawData()
+    
+    selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
+      "col.dapestr", # Id
+      "Selecione o DAP (cm):", # nome que sera mostrado na UI
+      choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
+      selected = DAP_names,     
+      options = list(
+        placeholder = 'Selecione uma variavel abaixo'#,
+        #onInitialize = I('function() { this.setValue(""); }')
+      ) # options    
+    )
+    
+  })
+  
+  output$selec_parcelasestr <- renderUI({
+    
+    data <- rawData()
+    
+    selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
+      "col.parcelasestr", # Id
+      "Selecione a var parcela:", # nome que sera mostrado na UI
+      choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
+      selected = parcelas_names,     
+      options = list(
+        placeholder = 'Selecione uma variavel abaixo'#,
+        #onInitialize = I('function() { this.setValue(""); }')
+      ) # options    
+    )
+    
+  })
+  
+  output$selec_area.parcelaestr <- renderUI({
+    
+    data <- rawData()
+    
+    selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
+      "area.parcelaestr", # Id
+      "Selecione a area da parcela (m²):", # nome que sera mostrado na UI
+      choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
+      selected = area_parcela_names,     
+      options = list(
+        placeholder = 'Selecione uma variavel abaixo'#,
+        #onInitialize = I('function() { this.setValue(""); }')
+      ) # options    
+    )
+    
+  })
+  
+  output$selec_est.verticalestr <- renderUI({
+    
+    data <- rawData()
+    
+    selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
+      "est.verticalestr", # Id
+      "Selecione a estrutura vertical:", # nome que sera mostrado na UI
+      choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
+      selected = est.vertical_names,     
+      options = list(
+        placeholder = 'Selecione uma variavel abaixo'#,
+        #onInitialize = I('function() { this.setValue(""); }')
+      ) # options    
+    )
+    
+  })
+  
+  output$selec_est.internoestr <- renderUI({
+    
+    data <- rawData()
+    
+    selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
+      "est.internoestr", # Id
+      "Selecione a estrutura interna:", # nome que sera mostrado na UI
+      choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
+      selected = est.interno_names,     
+      options = list(
+        placeholder = 'Selecione uma variavel abaixo'#,
+        #onInitialize = I('function() { this.setValue(""); }')
+      ) # options    
+    )
+    
+  })
+  
+  output$selec_rotuloNIestr <- renderUI({
+    
+    dados <- rawData()
+    
+    switch(input$CBestr,
+           "Manualmente" = textInput("rotutuloNIestr", 
+                                     label = "Rotulo:", 
+                                     value = "NI"),
+           
+           "lista de especies" = selectizeInput("rotutuloNIestr",
+                                                label = "Rotulo:",
+                                                choices = levels(as.factor(dados[,input$col.especiesestr])),
+                                                options = list(
+                                                  placeholder = 'Selecione uma especie abaixo',
+                                                  onInitialize = I('function() { this.setValue(""); }')
+                                                ) # options    
+           )# selectize
+    )
+    
+    
+  })
+  
+  # tabela
+  output$estr <- renderDataTable({
+    
+    if(input$Loadestr)
+    {
+      estrdt <- tabestrutura() 
+      
+      datatable( as.tbl(estrdt),
+                 options = list(searching = T,
+                                paging=FALSE )  ) 
+    }
+    
+  }) 
+  
+  
+  # Diversidade ####
+  
+  # funcao diversidade
+  tabdiversidade <- reactive({
+    
+    if(input$Loaddiv){
+      
+      dados <- rawData()
+      
+      x <- diversidade(data             = dados, 
+                       col.especies     = input$col.especiesdiv)
+      
+      x
+    }
+    
+  })
+  
+  # UI
+  output$selec_especiesdiv <- renderUI({
+    
+    data <- rawData()
+    
+    selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
+      "col.especiesdiv", # Id
+      "Selecione as especies", # nome que sera mostrado na UI
+      choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
+      selected = especies_names,     
+      options = list(
+        placeholder = 'Selecione uma variavel abaixo'#,
+        #onInitialize = I('function() { this.setValue(""); }')
+      ) # options    
+    )
+    
+  })
+  
+  # tabela
+  output$div <- renderDataTable({
+    
+    if(input$Loaddiv)
+    {
+      divdt <- tabdiversidade() 
+      
+      datatable( divdt,
+                 options = list(searching = FALSE,
+                                paging=FALSE )  ) 
+    }
+    
+  }) 
+  
+  
+  # BDq Meyer ####
+  
+  # funcao BDq Meyer
+  tabBDq <- reactive({
+    
+    if(input$LoadBDq){
+      
+      dados <- rawData()
+      
+      x <- bdq.meyer(data             = dados, 
+                     col.parcelas     = input$col.parcelasBDq,
+                     col.dap          = input$col.dapBDq,
+                     area.parcela     = input$area.parcelaBDq,
+                     intervalo.classe = input$intervalo.classeBDq,
+                     min.dap          = input$min.dapBDq,
+                     i.licourt        = input$i.licourtBDq  )
+      
+      x
+    }
+    
+  })
+  
+  # UI
+  
+  output$selec_parcelasBDq <- renderUI({
+    
+    data <- rawData()
+    
+    selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
+      "col.parcelasBDq", # Id
+      "Selecione a var parcela:", # nome que sera mostrado na UI
+      choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
+      selected = parcelas_names,     
+      options = list(
+        placeholder = 'Selecione uma variavel abaixo'#,
+        #onInitialize = I('function() { this.setValue(""); }')
+      ) # options    
+    )
+    
+  })
+  
+  output$selec_dapBDq <- renderUI({
+    
+    data <- rawData()
+    
+    selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
+      "col.dapBDq", # Id
+      "Selecione o DAP (cm):", # nome que sera mostrado na UI
+      choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
+      selected = DAP_names,     
+      options = list(
+        placeholder = 'Selecione uma variavel abaixo'#,
+        #onInitialize = I('function() { this.setValue(""); }')
+      ) # options    
+    )
+    
+  })
+  
+  output$selec_area.parcelaBDq <- renderUI({
+    
+    data <- rawData()
+    
+    selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
+      "area.parcelaBDq", # Id
+      "Selecione a area da parcela (m²):", # nome que sera mostrado na UI
+      choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
+      selected = area_parcela_names,     
+      options = list(
+        placeholder = 'Selecione uma variavel abaixo'#,
+        #onInitialize = I('function() { this.setValue(""); }')
+      ) # options    
+    )
+    
+  })
+  
+  # tabela
+  output$BDq1 <- renderDataTable({
+    
+    if(input$LoadBDq)
+    {
+      BDqdt <- tabBDq()
+      
+      datatable( as.data.frame(BDqdt[1]),
+                 options = list(searching = FALSE,
+                                paging=FALSE )  ) 
+    }
+    
+  }) 
+  output$BDq3 <- renderDataTable({
+    
+    if(input$LoadBDq)
+    {
+      BDqdt <- tabBDq()
+      BDqdt <- data.frame(b0 = BDqdt[[3]][1], b1 = BDqdt[[3]][2])
+
+      datatable(BDqdt,
+                 options = list(searching = FALSE,
+                                paging=FALSE )  ) 
+    }
+    
+  }) 
+
+  # Matriz Similaridade ####
+  
+  # funcao m similaridade
+  tabmsimilaridade <- reactive({
+    
+    if(input$Loadmsim){
+      
+      dados <- rawData()
+      
+      x <- m.similaridade(data             = dados, 
+                          col.especies     = input$col.especiesmsim,
+                          col.comparison   = input$col.parcelasmsim,
+                          rotulo.NI        = input$rotutuloNImsim  )
+      
+      x
+    }
+    
+  })
+  
+  # UI
+  
+  output$selec_especiesmsim <- renderUI({
+    
+    data <- rawData()
+    
+    selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
+      "col.especiesmsim", # Id
+      "Selecione as especies", # nome que sera mostrado na UI
+      choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
+      selected = especies_names,     
+      options = list(
+        placeholder = 'Selecione uma variavel abaixo'#,
+        #onInitialize = I('function() { this.setValue(""); }')
+      ) # options    
+    )
+    
+  })
+  
+  output$selec_parcelasmsim <- renderUI({
+    
+    data <- rawData()
+    
+    selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
+      "col.parcelasmsim", # Id
+      "Selecione a var parcela:", # nome que sera mostrado na UI
+      choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
+      selected = parcelas_names,     
+      options = list(
+        placeholder = 'Selecione uma variavel abaixo'#,
+        #onInitialize = I('function() { this.setValue(""); }')
+      ) # options    
+    )
+    
+  })
+  
+  output$selec_rotuloNImsim <- renderUI({
+    
+    dados <- rawData()
+    
+    switch(input$CBmsim,
+           "Manualmente" = textInput("rotutuloNImsim", 
+                                     label = "Rotulo:", 
+                                     value = "NI"),
+           
+           "lista de especies" = selectizeInput("rotutuloNImsim",
+                                                label = "Rotulo:",
+                                                choices = levels(
+                                                  as.factor(
+                                                    dados[,input$col.especiesmsim])),
+                                                options = list(
+                                                  placeholder = 'Selecione uma especie abaixo',
+                                                  onInitialize = I('function() { this.setValue(""); }')
+                                                ) # options    
+           )# selectize
+    )
+    
+    
+  })
+  
+  
+  # tabela
+  output$msim1 <- renderDataTable({
+    
+    if(input$Loadmsim)
+    {
+      msimdt1 <- tabmsimilaridade() 
+      msimdt1 <- as.data.frame(msimdt1[[1]])
+      names(msimdt1) <- NULL
+      
+      datatable( msimdt1,
+                 options = list(searching = FALSE,
+                                paging=FALSE )  ) 
+    }
+    
+  }) 
+  output$msim2 <- renderDataTable({
+    
+    if(input$Loadmsim)
+    {
+      msimdt2 <- tabmsimilaridade() 
+      msimdt2 <- as.data.frame(msimdt2[[2]])
+      names(msimdt2) <- NULL
+      
+      datatable( msimdt2,
+                 options = list(searching = FALSE,
+                                paging=FALSE )  ) 
+    }
+    
+  }) 
+  
+  
+  
+
+  
+  # Pareado Similaridade ####
+  # funcao p similaridade
+  tabpsimilaridade <- reactive({
+    
+    if(input$Loadpsim){
+      
+      dados <- rawData()
+      
+      #inv %>% 
+        #filter_(.dots = interp(~ transect == "T01", transect = as.name("transect") ) ) %>% 
+        #select_("scientific.name")
+      
+      x <- dados %>% 
+        filter_(.dots = interp(~ transect == input$psimselec_parc1, transect = as.name(input$col.parcelaspsim) ) ) %>% 
+        select_(input$col.especiespsim)
+      
+      y <- dados %>% 
+        filter_(.dots = interp(~ transect == input$psimselec_parc2, transect = as.name(input$col.parcelaspsim) ) ) %>% 
+        select_(input$col.especiespsim)
+      
+      x <- p.similaridade( 
+                          x         = x[,1],
+                          y         = y[,1],
+                          rotuloNI = input$rotutuloNIpsim  )
+      
+      x
+    }
+    
+  })
+  
+  # UI
+  
+  output$selec_especiespsim <- renderUI({
+    
+    data <- rawData()
+    
+    selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
+      "col.especiespsim", # Id
+      "Selecione as especies", # nome que sera mostrado na UI
+      choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
+      selected = especies_names,     
+      options = list(
+        placeholder = 'Selecione uma variavel abaixo'#,
+        #onInitialize = I('function() { this.setValue(""); }')
+      ) # options    
+    )
+    
+  })
+  
+  output$selec_parcelaspsim <- renderUI({
+    
+    data <- rawData()
+    
+    selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
+      "col.parcelaspsim", # Id
+      "Selecione a var parcela:", # nome que sera mostrado na UI
+      choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
+      selected = parcelas_names,     
+      options = list(
+        placeholder = 'Selecione uma variavel abaixo'#,
+        #onInitialize = I('function() { this.setValue(""); }')
+      ) # options    
+    )
+    
+  })
+  
+  output$selec_psimselec_parc1 <- renderUI({
+    
+    dados <- rawData()
+    
+    parcelas <- levels(
+      as.factor(
+        dados[,input$col.parcelaspsim]))
+    
+    selectizeInput("psimselec_parc1",
+                   label = "Selecione a Parcela 1:",
+                   choices = parcelas,
+                   options = list(
+                     placeholder = 'Selecione uma especie abaixo',
+                     onInitialize = I('function() { this.setValue(""); }')
+                   ) # options    
+    )
+    
+  })
+  
+  output$selec_psimselec_parc2 <- renderUI({
+    
+    dados <- rawData()
+    
+    parcelas <- levels(
+      as.factor(
+        dados[,input$col.parcelaspsim]))
+    
+    selectizeInput("psimselec_parc2",
+                   label = "Selecione a Parcela 2:",
+                   choices = parcelas,
+                   options = list(
+                     placeholder = 'Selecione uma especie abaixo',
+                     onInitialize = I('function() { this.setValue(""); }')
+                   ) # options    
+    )
+    
+  })
+  
+  output$selec_rotuloNIpsim <- renderUI({
+    
+    dados <- rawData()
+    
+    switch(input$CBpsim,
+           "Manualmente" = textInput("rotutuloNIpsim", 
+                                     label = "Rotulo:", 
+                                     value = "NI"),
+           
+           "lista de especies" = selectizeInput("rotutuloNIpsim",
+                                                label = "Rotulo:",
+                                                choices = levels(
+                                                  as.factor(
+                                                    dados[,input$col.especiespsim])),
+                                                options = list(
+                                                  placeholder = 'Selecione uma especie abaixo',
+                                                  onInitialize = I('function() { this.setValue(""); }')
+                                                ) # options    
+           )# selectize
+    )
+    
+    
+  })
+  
+  # tabela
+  output$psim <- renderDataTable({
+    
+    if(input$Loadpsim)
+    {
+      psimdt <- tabpsimilaridade() 
+      psimdt <- data.frame("Jaccard" = psimdt[1], "Sorensen" = psimdt[2])
+
+      
+      datatable( psimdt,
+                 options = list(searching = FALSE,
+                                paging=FALSE )  ) 
+    }
+    
+  }) 
+  
+  
+  # Nivel Parcela ####
+  
+  # dados / funcao inv_summary
+  newData <- reactive({
+    
+    if(input$Loadnew){    
+      
+      dados <- rawData()
+      
+      x <- inv_summary(df           = dados, 
+                       DAP          = input$DAPnew, 
+                       HT           = input$HTnew,
+                       VCC          = input$VCCnew,
+                       area_parcela = input$area_parcelanew,
+                       groups       = input$gruposnew,
+                       area_total   = input$area_totalnew,
+                       idade        = input$idadenew,
+                       VSC          = input$VSCnew,
+                       Hd           = input$Hdnew)
+      
+      x
+      
+    }
+    
+  })
+  
+  # UI
+  output$selec_DAPnew <- renderUI({
+    
+    data <- rawData()
+    
+    selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
+      'DAPnew', # Id
+      "DAP (cm):", # nome que sera mostrado na UI
+      choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
+      selected = DAP_names,
+      options = list(
+        placeholder = 'Selecione uma variavel abaixo'# ,
+        # onInitialize = I('function() { this.setValue(""); }')
+      ) # options
+    )
+    
+  })
+  
+  output$selec_HTnew <- renderUI({
+    
+    data <- rawData()
+    
+    selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
+      'HTnew', # Id
+      "HT (m):", # nome que sera mostrado na UI
+      choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
+      selected = HT_names,
+      options = list(
+        placeholder = 'Selecione uma variavel abaixo'#,
+        # onInitialize = I('function() { this.setValue(""); }')
+      ) # options
+    )
+    
+  })
+  
+  output$selec_VCCnew <- renderUI({
+    
+    data <- rawData()
+    
+    selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
+      'VCCnew', # Id
+      "Volume com Casca (m³):", # nome que sera mostrado na UI
+      choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
+      selected = VCC_names,
+      options = list(
+        placeholder = 'Selecione uma variavel abaixo'#,
+        #onInitialize = I('function() { this.setValue(""); }')
+      ) # options
+    )
+    
+  })
+  
+  output$selec_area_parcelanew <- renderUI({
+    
+    data <- rawData()
+    
+    selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
+      'area_parcelanew', # Id
+      "Area da Parcela (m²):", # nome que sera mostrado na UI
+      choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
+      selected = area_parcela_names,
+      options = list(
+        placeholder = 'Selecione uma variavel abaixo'#,
+        # onInitialize = I('function() { this.setValue(""); }')
+      ) # options
+    )
+    
+  })
+  
+  output$selec_gruposnew <- renderUI({
+    
+    data <- rawData()
+    
+    selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
+      'gruposnew', # Id
+      "Grupo(s) (chaves):", # nome que sera mostrado na UI
+      choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
+      multiple = TRUE,
+      selected = grupos_names,
+      options = list(
+        placeholder = 'Selecione uma variavel abaixo'#,
+        #onInitialize = I('function() { this.setValue(""); }')
+      ) # options
+    )
+    
+  })
+  
+  output$selec_area_totalnew <- renderUI({
+    
+    data <- rawData()
+    
+    selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
+      'area_totalnew', # Id
+      "Area Total (ha):", # nome que sera mostrado na UI
+      choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
+      selected = area_total_names,
+      options = list(
+        placeholder = 'Selecione uma variavel abaixo'#,
+        #onInitialize = I('function() { this.setValue(""); }')
+      ) # options
+    )
+    
+  })
+  
+  output$selec_idadenew <- renderUI({
+    
+    data <- rawData()
+    
+    selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
+      'idadenew', # Id
+      "Idade (meses):", # nome que sera mostrado na UI
+      choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
+      #selected = idade_names,
+      options = list(
+        placeholder = 'Selecione uma variavel abaixo',
+        onInitialize = I('function() { this.setValue(""); }')
+      ) # options
+    )
+    
+  })
+  
+  output$selec_VSCnew <- renderUI({
+    
+    data <- rawData()
+    
+    selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
+      'VSCnew', # Id
+      "Volume sem Casca (m³):", # nome que sera mostrado na UI
+      choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
+     # selected = VSC_names,
+      options = list(
+        placeholder = 'Selecione uma variavel abaixo',
+         onInitialize = I('function() { this.setValue(""); }')
+      ) # options
+    )
+    
+  })
+  
+  output$selec_HDnew <- renderUI({
+    
+    data <- rawData()
+    
+    selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
+      'Hdnew', # Id
+      "Altura Dominante (HD) (m²):", # nome que sera mostrado na UI
+      choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
+     # selected = HD_names,
+      options = list(
+        placeholder = 'Selecione uma variavel abaixo',
+        onInitialize = I('function() { this.setValue(""); }')
+      ) # options
+    )
+    
+  })
+  
+  # tabela
+  output$newdata <- renderDataTable({ # renderizamos uma DT::DataTable
+    
+    data <- newData() 
+    
+    if(input$Loadnew)
+    {
+      datatable(data) # Criamos uma DT::datatable com base no objeto
+    }
+    
+  })
+  
+  
+  # ACS ####
+  
+  # switch que muda o dado a ser utilizado na funcao acs
+  acsData <- reactive({
+    
+    switch(input$dfacs, 
+           "Nivel Parcela" = rawData(), 
+           "Nivel Arv/Parcela" = newData() )
+    
+  })
+  
+  # funcao acs aplicada em acsData
+  tabacs <- reactive({
+    
+    if(input$Loadacs){
+      
+      dados <- acsData()
+      
+      x <-     acs(df             = dados,
+                   area_total     = input$area_totalacs, 
+                   area_parcela   = input$area_parcelaacs,
+                   VCC            = input$VCCacs,
+                   idade          = input$idadeacs,
+                   grupos         = input$gruposacs, 
+                   alpha          = input$alphaacs, 
+                   Erro           = input$erroacs, 
+                   casas_decimais = input$cdacs, 
+                   pop            = input$popacs, 
+                   tidy           = input$tidyacs)
+      
+      x}
+    
+  })
+  
+  # UI: as opcoes (choices) sao os nomes de asData
+  
+  output$selec_area_totalacs <- renderUI({
+    
+    data <- acsData()
+    
+    selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
+      'area_totalacs', # Id
+      "Area Total (ha):", # nome que sera mostrado na UI
+      choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
+      selected = area_total_names,     
+      options = list(
+        placeholder = 'Selecione uma variavel abaixo'#,
+        #onInitialize = I('function() { this.setValue(""); }')
+      ) # options
+    )
+    
+  })
+  
+  output$selec_area_parcelaacs <- renderUI({
+    
+    data <- acsData()
+    
+    selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
+      'area_parcelaacs', # Id
+      "Area da Parcela (m²):", # nome que sera mostrado na UI
+      choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
+      selected = area_parcela_names,     
+      options = list(
+        placeholder = 'Selecione uma variavel abaixo'#,
+        #onInitialize = I('function() { this.setValue(""); }')
+      ) # options
+    )
+    
+  })
+  
+  output$selec_VCCacs <- renderUI({
+    
+    data <- acsData()
+    
+    selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
+      'VCCacs', # Id
+      "Volume (m³):", # nome que sera mostrado na UI
+      choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
+      selected = VCC_names,     
+      options = list(
+        placeholder = 'Selecione uma variavel abaixo'#,
+        # onInitialize = I('function() { this.setValue(""); }')
+      ) # options
+    )
+    
+  })
+  
+  output$selec_idadeacs <- renderUI({
+    
+    data <- acsData()
+    
+    selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
+      'idadeacs', # Id
+      "Idade (meses):", # nome que sera mostrado na UI
+      choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
+      #selected = idade_names,     
+      options = list(
+        placeholder = 'Selecione uma variavel abaixo',
+         onInitialize = I('function() { this.setValue(""); }')
+      ) # options
+    )
+    
+  })
+  
+  output$selec_gruposacs <- renderUI({
+    
+    data <- acsData()
+    
+    selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
+      'gruposacs', # Id
+      "Grupos", # nome que sera mostrado na UI
+      choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
+      multiple = TRUE,  # permite mais de uma opcao ser selecionada
+      selected = NULL,     
+      options = list(
+        placeholder = 'Selecione as variaveis abaixo',
+        onInitialize = I('function() { this.setValue(""); }')
+      ) # options
+    )
+    
+  })
+  # tabela
   output$acs <- renderDataTable({
     
     acsdt <- tabacs() 
@@ -641,11 +2004,161 @@ shinyServer(function(input, output, session) {
     {
       datatable( acsdt,
                  options = list(searching = FALSE,
-                                paging=FALSE )   )
+                                paging=FALSE
+                 )   
+                 
+      )
     } 
     
   })
   
+  # ACE ####
+  
+  # switch que muda o dado a ser utilizado na funcao ace
+  aceData <- reactive({
+    
+    switch(input$dface, 
+           "Nivel Parcela" = rawData(), 
+           "Nivel Arv/Parcela" = newData() )
+    
+  })
+  
+  # resultado 1 da funcao ace aplicada em aceData
+  tabace1 <- reactive({
+    
+    if(input$Loadace){
+      
+      dados <- aceData()
+      
+      x <- ace(df             = dados, 
+               area_estrato   = input$area_estratoace, 
+               area_parcela   = input$area_parcelaace, 
+               VCC            = input$VCCace, 
+               grupos         = input$gruposace, 
+               idade          = input$idadeace, 
+               alpha          = input$alphaace, 
+               Erro           = input$erroace, 
+               casas_decimais = input$cdace, 
+               pop            = input$popace, 
+               tidy           = input$tidyace)[[1]]
+      x
+    }
+    
+  })
+  
+  # resultado 2 da funcao ace aplicada em aceData
+  tabace2 <- reactive({
+    
+    if(input$Loadace){ 
+      
+      dados <- aceData()
+      
+      x <- ace(df = dados, 
+               area_estrato   = input$area_estratoace, 
+               area_parcela   = input$area_parcelaace , 
+               VCC            = input$VCCace, 
+               grupos         = input$gruposace, 
+               idade          = input$idadeace, 
+               alpha          = input$alphaace, 
+               Erro           = input$erroace, 
+               casas_decimais = input$cdace, 
+               pop            = input$popace, 
+               tidy           = input$tidyace)[[2]]
+      
+      x
+    }
+    
+  })
+  
+  # UI: as opcoes (choices) sao os nomes de asData
+  
+  output$selec_area_totalace <- renderUI({
+    
+    data <- aceData()
+    
+    selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
+      'area_estratoace', # Id
+      "Area Total (ha):", # nome que sera mostrado na UI
+      choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
+      selected = area_total_names,     
+      options = list(
+        placeholder = 'Selecione uma variavel abaixo'#,
+        # onInitialize = I('function() { this.setValue(""); }')
+      ) # options
+    )
+    
+  }) 
+  
+  output$selec_area_parcelaace <- renderUI({
+    
+    data <- aceData()
+    
+    selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
+      'area_parcelaace', # Id
+      "Area da Parcela (m²):", # nome que sera mostrado na UI
+      choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
+      selected = area_parcela_names,     
+      options = list(
+        placeholder = 'Selecione uma variavel abaixo'#,
+        # onInitialize = I('function() { this.setValue(""); }')
+      ) # options
+    )
+    
+  })
+  
+  output$selec_VCCace <- renderUI({
+    
+    data <- aceData()
+    
+    selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
+      'VCCace', # Id
+      "Volume (m³):", # nome que sera mostrado na UI
+      choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
+      selected = VCC_names,     
+      options = list(
+        placeholder = 'Selecione uma variavel abaixo'#,
+        # onInitialize = I('function() { this.setValue(""); }')
+      ) # options
+    )
+    
+  })
+  
+  output$selec_gruposace <- renderUI({
+    
+    data <- aceData()
+    
+    selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
+      'gruposace', # Id
+      "Variavel(is) de estratificacao:", # nome que sera mostrado na UI
+      choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
+      multiple = TRUE,  # permite mais de uma opcao ser selecionada
+      selected = estratos_names,     
+      options = list(
+        placeholder = 'Selecione as variaveis abaixo'#,
+        # onInitialize = I('function() { this.setValue(""); }')
+      ) # options
+    )
+    
+  })
+  
+  output$selec_idadeace <- renderUI({
+    
+    data <- aceData()
+    
+    selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
+      'idadeace', # Id
+      "Idade (meses):", # nome que sera mostrado na UI
+      choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
+     # selected = idade_names,     
+      options = list(
+        placeholder = 'Selecione uma variavel abaixo',
+         onInitialize = I('function() { this.setValue(""); }')
+      ) # options
+    )
+    
+  })
+  
+  # tabela ace1
   output$ace1 <- renderDataTable({
     
     ace1dt <- tabace1() 
@@ -654,11 +2167,15 @@ shinyServer(function(input, output, session) {
     {
       datatable( ace1dt,
                  options = list(searching = FALSE,
-                                paging=FALSE )  )
+                                paging=FALSE
+                 )   
+                 
+      )
     } 
     
   })
   
+  # tabela ace2
   output$ace2 <- renderDataTable({
     
     ace2dt <- tabace2() 
@@ -667,11 +2184,136 @@ shinyServer(function(input, output, session) {
     {
       datatable( ace2dt,
                  options = list(searching = FALSE,
-                                paging=FALSE ) )
+                                paging=FALSE
+                 )   
+                 
+      )
     } 
     
   })
   
+  # AS ####
+  
+  # switch que muda o dado a ser utilizado na funcao as
+  asData <- reactive({
+    
+    switch(input$dfas, 
+           "Nivel Parcela" = rawData(), 
+           "Nivel Arv/Parcela" = newData() )
+    
+  })
+  
+  # funcao as aplicado em asData
+  tabas <- reactive({
+    
+    if(input$Loadas){ 
+      
+      dados <- asData()
+      
+      x <- as_diffs(df             = dados, 
+                    area_total     = input$area_totalas,
+                    area_parcela   = input$area_parcelaas ,
+                    VCC            = input$VCCas,
+                    idade          = input$idadeas,
+                    grupos         = input$gruposas,
+                    alpha          = input$alphaas,
+                    Erro           = input$erroas,
+                    casas_decimais = input$cdas,
+                    tidy           = input$tidyas)
+      
+      x
+    }
+    
+  }) 
+  
+  # UI: as opcoes (choices) sao os nomes de asData
+  
+  output$selec_area_totalas <- renderUI({
+    
+    data <- asData()
+    
+    selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
+      'area_totalas', # Id
+      "Area Total (ha):", # nome que sera mostrado na UI
+      choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
+      selected = area_total_names,     
+      options = list(
+        placeholder = 'Selecione uma variavel abaixo'#,
+        # onInitialize = I('function() { this.setValue(""); }')
+      ) # options
+    )
+    
+  })
+  
+  output$selec_area_parcelaas <- renderUI({
+    
+    data <- asData()
+    
+    selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
+      'area_parcelaas', # Id
+      "Area da Parcela (m²):", # nome que sera mostrado na UI
+      choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
+      selected = area_parcela_names,     
+      options = list(
+        placeholder = 'Selecione uma variavel abaixo'#,
+        #onInitialize = I('function() { this.setValue(""); }')
+      ) # options
+    )
+    
+  })
+  
+  output$selec_VCCas <- renderUI({
+    
+    data <- asData()
+    
+    selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
+      'VCCas', # Id
+      "Volume (m³):", # nome que sera mostrado na UI
+      choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
+      selected = VCC_names,     
+      options = list(
+        placeholder = 'Selecione uma variavel abaixo'#,
+        # onInitialize = I('function() { this.setValue(""); }')
+      ) # options
+    )
+    
+  })
+  
+  output$selec_idadeas <- renderUI({
+    
+    data <- asData()
+    
+    selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
+      'idadeas', # Id
+      "Idade (meses):", # nome que sera mostrado na UI
+      choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
+      #selected = idade_names,     
+      options = list(
+        placeholder = 'Selecione uma variavel abaixo',
+        onInitialize = I('function() { this.setValue(""); }')
+      ) # options
+    )
+    
+  })
+  
+  output$selec_gruposas <- renderUI({
+    
+    data <- asData()
+    
+    selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
+      'gruposas', # Id
+      "Grupos", # nome que sera mostrado na UI
+      choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
+      multiple = TRUE,  # permite mais de uma opcao ser selecionada
+      options = list(
+        placeholder = 'Selecione as variaveis abaixo',
+        onInitialize = I('function() { this.setValue(""); }')
+      ) # options
+    )
+    
+  })
+  
+  # tabela as
   output$as <- renderDataTable({
     
     asdt <- tabas() 
@@ -680,22 +2322,43 @@ shinyServer(function(input, output, session) {
     {
       datatable( asdt,
                  options = list(searching = FALSE,
-                                paging=FALSE )    )
+                                paging=FALSE
+                 )   
+                 
+      )
     } 
     
   })
   
+  # Download ####
+  
   datasetInput <- reactive({
     switch(input$dataset,
-           "Amostragem Casual Simples" = tabacs(),
+           "Agregar"                           = tabagregate(),
+           "Estrutura"                         = as.tbl(tabestrutura()),
+           "Diversidade"                       = as.tbl(tabdiversidade()),
+           "BDq Meyer"                         = as.tbl(tabBDq()[[1]]),
+           "BDq Meyer - Coeficientes"          = data.frame(b0 = tabBDq()[[3]][1], b1 = tabBDq()[[3]][2]),
+           "Matriz Similaridade - Jaccard"     = tabmsimilaridade()[[1]],
+           "Matriz Similaridade - Sorensen"    = tabmsimilaridade()[[2]],
+           "Pareado Similaridade"              = data.frame("Jaccard" = tabpsimilaridade()[1], "Sorensen" = tabpsimilaridade()[2]),
+           "Amostragem Casual Simples"         = tabacs(),
            "Amostragem Casual Estratificada 1" = tabace2(),
            "Amostragem Casual Estratificada 2" = tabace1(),
-           "Amostragem Sistematica" = tabas())
+           "Amostragem Sistematica"            = tabas(),
+           "Nivel Parcela"                     = newData() )
   })
   
-  output$table <- renderTable({
-    datasetInput()
-  })
+  output$table <- renderDataTable({
+    
+    datadownload <- datasetInput()
+    
+    datatable( datadownload,
+               options = list(searching = FALSE,
+                              paging=FALSE
+               )  )
+    
+  }) 
   
   output$downloadData <- downloadHandler(
     filename = function() { 
@@ -724,6 +2387,5 @@ shinyServer(function(input, output, session) {
       
     }
   )
-  
   
 })

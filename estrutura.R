@@ -2,7 +2,8 @@ estrutura = function(data, col.especies, col.dap, col.parcelas, area.parcela, es
     SPECIES = col.especies
     DBH = col.dap
     PLOTS = col.parcelas
-    AREA.PLOT = area.parcela
+    # alterei aqui para areaplot poder ser uma coluna do data frame
+    if(is.numeric(area.parcela) ){AREA.PLOT = area.parcela}else(AREA.PLOT = mean(data[,area.parcela],na.rm = T ) )
     VERTICAL = est.vertical
     INTERNA = est.interno
     NI = nao.identificada
@@ -52,8 +53,8 @@ estrutura = function(data, col.especies, col.dap, col.parcelas, area.parcela, es
     result["FR"] = round(FR, 4)
     
     # Calcula densidade absoluta e relativa
- 
-    DA = pivot[2] / (nplots * mean(AREA.PLOT) ) # Media para poder aceitar vetores como entrada
+    # Alterei aqui para a area poder ser inserida em m2
+    DA = pivot[2] / (nplots * (AREA.PLOT/10000) )
     result["DA"] = round(DA, 4)
 
     AcDAi = sum(DA)    
@@ -66,7 +67,8 @@ estrutura = function(data, col.especies, col.dap, col.parcelas, area.parcela, es
     AB = tapply(data[,"AB"], data[,SPECIES], sum)
     AB = AB[which(names(AB) %in% espList)]
     
-    DoA = AB / (nplots * AREA.PLOT)
+    # Alterei aqui para a area poder ser inserida em m2
+    DoA = AB / (nplots * (AREA.PLOT/10000) )
     result["DoA"] = round(DoA, 6)
     
     AcDoAi = sum(DoA)

@@ -4,7 +4,8 @@ bdq.meyer = function(data, col.parcelas, col.dap, area.parcela, intervalo.classe
   DBH = col.dap
   DBH.MIN = min.dap
   PLOTS = col.parcelas
-  AREA.PLOT = area.parcela
+  # alterei aqui para areaplot poder ser uma coluna do data frame
+  if(is.numeric(area.parcela) ){AREA.PLOT = area.parcela}else(AREA.PLOT = mean(data[,area.parcela],na.rm = T ) )
   LICOURT = i.licourt
   
   # Remover NA
@@ -22,7 +23,8 @@ bdq.meyer = function(data, col.parcelas, col.dap, area.parcela, intervalo.classe
   DD = data.frame(Classe = as.numeric(freq[,1]))
   DD$CentroClasse = DD$Classe * INTERVALO.CLASSE - (INTERVALO.CLASSE / 2)
   DD$NumIndv = freq[,2]
-  DD$IndvHectare = round(DD$NumIndv / (AREA.PLOT * nplots), 1)
+  # Alterei aqui para a area poder ser inserida em m2
+  DD$IndvHectare = round(DD$NumIndv / ((AREA.PLOT/10000) * nplots), 1)
   DD = DD[DD$CentroClasse >= DBH.MIN,]
   rm(freq)
   
