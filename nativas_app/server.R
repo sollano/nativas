@@ -473,7 +473,8 @@ inv_summary <- function(df,DAP, HT, VCC, area_parcela, groups, area_total,idade,
   if(missing(area_parcela)||is.null(area_parcela)||area_parcela==F||area_parcela=="")
   {stop("please insert sample area variable")}
   
-  if(missing(groups)||is.null(groups)||groups==F||groups==""){groups<-NULL}
+  if(missing(groups)||is.null(groups)||groups==F||groups==""){groups<-NULL}else{df <-df[  apply(!is.na(df[groups ]) , MARGIN = 1, function(x) all(x) ), ] }
+  
   
   # argumentos opcionais
   if(missing(area_total) || is.null(area_total) || area_total==F || area_total==""   ){df$area_total<-NA; area_total <- "area_total"}
@@ -537,6 +538,7 @@ inv_summary <- function(df,DAP, HT, VCC, area_parcela, groups, area_total,idade,
     select_if(Negate(anyNA)) %>%  # remove variaveis que nao foram informadas (argumentos opicionais nao inseridos viram NA)
     as.data.frame
 }
+
 
 acs <- function(df, area_total, area_parcela, VCC, idade, grupos, alpha = 0.05, Erro = 10, casas_decimais=4, pop="inf",tidy=T){
   

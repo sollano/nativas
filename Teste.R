@@ -37,7 +37,7 @@ inv <- read.csv("cauaxi 2012.csv") %>%
   mutate(
     VOL           = 0.000503 * DBH^2.187162,
     total.area    = 50,
-    transect.area = 1000                   )
+    transect.area = 1000        )
 
 #write.csv(inv, "cauaxi 2012_.csv", row.names = F)
 
@@ -60,6 +60,9 @@ inv_summary(inv, "DBH","Htot", "VOL", "transect.area", groups = F)
 # Inv geral, por parcela
 inv_summary(inv,"DBH", "Htot", "VOL", "transect.area", groups = "transect")
 
+# Inv geral, por especie
+inv_summary(inv,"DBH", "Htot", "VOL", "transect.area", groups = "scientific.name")
+
 # Inv geral, por parcela e especie
 inv_summary(inv, "DBH", "Htot", "VOL", "transect.area", groups = c("transect", "scientific.name") )
 
@@ -74,3 +77,21 @@ inv_summary(inv, "DBH", "Htot")
 inv_summary(inv, "DBH", "Htot", "VOL")
 inv_summary(inv, "DBH", "Htot", "VOL", "transect.area")
 
+
+inv2 <- read.csv("ducke.csv") %>% 
+  mutate(
+    VOL           = 0.000503 * DBH_11^2.187162,
+    total.area    = 50,
+    transect.area = 1000        )
+
+# Inv geral, sem grupos
+inv_summary(inv2, "DBH_11","Htot_11", "VOL", "transect.area", groups = F)
+
+# Inv geral, por parcela
+inv_summary(inv2,"DBH_11", "Htot_11", "VOL", "transect.area", groups = "transect")
+
+# Inv geral, por parcela e especie
+inv_summary(inv2, "DBH_11", "Htot_11", "VOL", "transect.area", groups = c("transect", "scientific.name") )
+
+# Argumento de area pode ser numerico
+inv_summary(inv2, "DBH_11", "Htot_11", "VOL", 1000, groups = c("transect", "scientific.name") )

@@ -1,28 +1,37 @@
 inv_summary <- function(df,DAP, HT, VCC, area_parcela, groups, area_total,idade,VSC,Hd) {
   
-  require(dplyr)
+  suppressPackageStartupMessages(require(dplyr))
   require(lazyeval)
   
-  if(missing(df)){stop("please insert data frame")}
-  if(missing(DAP)){stop("please insert diameter variable")}
-  if(missing(HT)){stop("please insert height variable")}
-  if(missing(VCC)){stop("please insert volume variable")}
-  if(missing(area_parcela)){stop("please insert sample area variable")}
+  if( missing(df)||is.null(df)||df==F)
+  {stop("please insert data frame")}
   
-  if(missing(groups) || groups==FALSE || is.null(groups) ){groups<-NULL}
+  if(missing(DAP)||is.null(DAP)||DAP==F||DAP=="")
+  {stop("please insert diameter variable")}
+  
+  if(missing(HT)||is.null(HT)||HT==F||HT=="")
+  {stop("please insert height variable")}
+  
+  if(missing(VCC)||is.null(VCC)||VCC==F||VCC=="")
+  {stop("please insert volume variable")}
+  
+  if(missing(area_parcela)||is.null(area_parcela)||area_parcela==F||area_parcela=="")
+  {stop("please insert sample area variable")}
+  
+  if(missing(groups)||is.null(groups)||groups==F||groups==""){groups<-NULL}else{df <-df[  apply(!is.na(df[groups ]) , MARGIN = 1, function(x) all(x) ), ] }
+  
   
   # argumentos opcionais
-  if(missing(area_total) || area_total==FALSE || is.null(area_total) ){df$area_total<-NA; area_total <- "area_total"}
-  if(missing(idade)      || idade==FALSE      || is.null(idade)      ){df$idade<-NA;      idade <- "idade"}
-  if(missing(VSC)        || VSC==FALSE        || is.null(VSC)        ){df$VSC<-NA;        VSC <- "VSC"}
+  if(missing(area_total) || is.null(area_total) || area_total==F || area_total==""   ){df$area_total<-NA; area_total <- "area_total"}
+  if(missing(idade)      || is.null(idade)      || idade==F      || idade==""        ){df$idade<-NA;      idade <- "idade"}
+  if(missing(VSC)        || is.null(VSC)        || VSC==F        || VSC==""          ){df$VSC<-NA;        VSC <- "VSC"}
   
   # argumentos de area podem ser numericos
   if(is.numeric(area_parcela)){df$area_parcela <- area_parcela; area_parcela <- "area_parcela"}
   if(is.numeric(area_total  )){df$area_total   <- area_total; area_total     <- "area_total"}
   
   
-  
-  if(missing(Hd)) { # calculo da altura dominante
+  if(missing(Hd)||is.null(Hd)||Hd==F||Hd=="") { # calculo da altura dominante
     
     if(  "HD" %in% names(df) ){ df$HD <- NULL }
     
@@ -71,6 +80,6 @@ inv_summary <- function(df,DAP, HT, VCC, area_parcela, groups, area_total,idade,
         )#setnames 
     ) %>% #sumarise 
     na_if(0) %>% # substitui 0 por NA
-    select_if(Negate(anyNA)) # remove variaveis que nao foram informadas (argumentos opicionais nao inseridos viram NA)
-  
+    select_if(Negate(anyNA))# %>%  # remove variaveis que nao foram informadas (argumentos opicionais nao inseridos viram NA)
+    #as.data.frame
 }
