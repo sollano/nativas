@@ -1124,7 +1124,7 @@ shinyServer(function(input, output, session) {
                      est.interno      = input$est.internoestr,
                      nao.identificada = input$rotutuloNIestr  )
       
-      x
+      as.tbl(x)
     }
     
   })
@@ -1322,7 +1322,7 @@ shinyServer(function(input, output, session) {
   # BDq Meyer ####
   
   # funcao BDq Meyer
-  tabBDq <- reactive({
+  tabBDq1 <- reactive({
     
     if(input$LoadBDq){
       
@@ -1336,6 +1336,25 @@ shinyServer(function(input, output, session) {
                      min.dap          = input$min.dapBDq,
                      i.licourt        = input$i.licourtBDq  )
       
+      x[[1]]
+    }
+    
+  })
+  tabBDq3 <- reactive({
+    
+    if(input$LoadBDq){
+      
+      dados <- rawData()
+      
+      x <- bdq.meyer(data             = dados, 
+                     col.parcelas     = input$col.parcelasBDq,
+                     col.dap          = input$col.dapBDq,
+                     area.parcela     = input$area.parcelaBDq,
+                     intervalo.classe = input$intervalo.classeBDq,
+                     min.dap          = input$min.dapBDq,
+                     i.licourt        = input$i.licourtBDq  )
+      
+      x <- data.frame(b0 = x[[3]][1], b1 = x[[3]][2])
       x
     }
     
@@ -1399,9 +1418,9 @@ shinyServer(function(input, output, session) {
     
     if(input$LoadBDq)
     {
-      BDqdt <- tabBDq()
+      BDqdt <- tabBDq1()
       
-      datatable( as.data.frame(BDqdt[1]),
+      datatable( as.data.frame(BDqdt),
                  options = list(searching = FALSE,
                                 paging=FALSE )  ) 
     }
@@ -1411,8 +1430,7 @@ shinyServer(function(input, output, session) {
     
     if(input$LoadBDq)
     {
-      BDqdt <- tabBDq()
-      BDqdt <- data.frame(b0 = BDqdt[[3]][1], b1 = BDqdt[[3]][2])
+      BDqdt <- tabBDq3()
 
       datatable(BDqdt,
                  options = list(searching = FALSE,
@@ -1424,7 +1442,7 @@ shinyServer(function(input, output, session) {
   # Matriz Similaridade ####
   
   # funcao m similaridade
-  tabmsimilaridade <- reactive({
+  tabmsimilaridade1 <- reactive({
     
     if(input$Loadmsim){
       
@@ -1435,6 +1453,25 @@ shinyServer(function(input, output, session) {
                           col.comparison   = input$col.parcelasmsim,
                           rotulo.NI        = input$rotutuloNImsim  )
       
+      x <- as.data.frame(x[[1]])
+      names(x) <- 1:length(x)
+      x
+    }
+    
+  })
+  tabmsimilaridade2 <- reactive({
+    
+    if(input$Loadmsim){
+      
+      dados <- rawData()
+      
+      x <- m.similaridade(data             = dados, 
+                          col.especies     = input$col.especiesmsim,
+                          col.comparison   = input$col.parcelasmsim,
+                          rotulo.NI        = input$rotutuloNImsim  )
+      
+      x <- as.data.frame(x[[2]])
+      names(x) <- 1:length(x)
       x
     }
     
@@ -1506,10 +1543,8 @@ shinyServer(function(input, output, session) {
     
     if(input$Loadmsim)
     {
-      msimdt1 <- tabmsimilaridade() 
-      msimdt1 <- as.data.frame(msimdt1[[1]])
-      names(msimdt1) <- NULL
-      
+      msimdt1 <- tabmsimilaridade1() 
+
       datatable( msimdt1,
                  options = list(searching = FALSE,
                                 paging=FALSE )  ) 
@@ -1520,20 +1555,15 @@ shinyServer(function(input, output, session) {
     
     if(input$Loadmsim)
     {
-      msimdt2 <- tabmsimilaridade() 
-      msimdt2 <- as.data.frame(msimdt2[[2]])
-      names(msimdt2) <- NULL
-      
+      msimdt2 <- tabmsimilaridade2() 
+
       datatable( msimdt2,
                  options = list(searching = FALSE,
                                 paging=FALSE )  ) 
     }
     
   }) 
-  
-  
-  
-
+ 
   
   # Pareado Similaridade ####
   # funcao p similaridade
@@ -1560,7 +1590,9 @@ shinyServer(function(input, output, session) {
                           y         = y[,1],
                           rotuloNI = input$rotutuloNIpsim  )
       
+      x <- data.frame("Jaccard" = x[1], "Sorensen" = x[2])
       x
+
     }
     
   })
@@ -1669,10 +1701,8 @@ shinyServer(function(input, output, session) {
     if(input$Loadpsim)
     {
       psimdt <- tabpsimilaridade() 
-      psimdt <- data.frame("Jaccard" = psimdt[1], "Sorensen" = psimdt[2])
 
-      
-      datatable( psimdt,
+            datatable( psimdt,
                  options = list(searching = FALSE,
                                 paging=FALSE )  ) 
     }
@@ -2335,13 +2365,13 @@ shinyServer(function(input, output, session) {
   datasetInput <- reactive({
     switch(input$dataset,
            "Agregar"                           = tabagregate(),
-           "Estrutura"                         = as.tbl(tabestrutura()),
-           "Diversidade"                       = as.tbl(tabdiversidade()),
-           "BDq Meyer"                         = as.tbl(tabBDq()[[1]]),
-           "BDq Meyer - Coeficientes"          = data.frame(b0 = tabBDq()[[3]][1], b1 = tabBDq()[[3]][2]),
-           "Matriz Similaridade - Jaccard"     = tabmsimilaridade()[[1]],
-           "Matriz Similaridade - Sorensen"    = tabmsimilaridade()[[2]],
-           "Pareado Similaridade"              = data.frame("Jaccard" = tabpsimilaridade()[1], "Sorensen" = tabpsimilaridade()[2]),
+           "Estrutura"                         = tabestrutura(),
+           "Diversidade"                       = tabdiversidade(),
+           "BDq Meyer"                         = tabBDq1(),
+           "BDq Meyer - Coeficientes"          = tabBDq3(),
+           "Matriz Similaridade - Jaccard"     = tabmsimilaridade1(),
+           "Matriz Similaridade - Sorensen"    = tabmsimilaridade2(),
+           "Pareado Similaridade"              = tabpsimilaridade(),
            "Amostragem Casual Simples"         = tabacs(),
            "Amostragem Casual Estratificada 1" = tabace2(),
            "Amostragem Casual Estratificada 2" = tabace1(),
