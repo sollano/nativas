@@ -1043,7 +1043,7 @@ shinyServer(function(input, output, session) {
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       "col.especiesagreg", # Id
-      "Selecione as especies", # nome que sera mostrado na UI
+      "Selecione as especies:", # nome que sera mostrado na UI
       choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
       selected = especies_names,     
       options = list(
@@ -1060,7 +1060,7 @@ shinyServer(function(input, output, session) {
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       "col.parcelasagreg", # Id
-      "Selecione as parcelas", # nome que sera mostrado na UI
+      "Selecione as parcelas:", # nome que sera mostrado na UI
       choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
       selected = parcelas_names,     
       options = list(
@@ -1136,7 +1136,7 @@ shinyServer(function(input, output, session) {
 
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       "col.especiesestr", # Id
-      "Selecione as especies", # nome que sera mostrado na UI
+      "Selecione as especies:", # nome que sera mostrado na UI
       choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
       selected = especies_names,     
       options = list(
@@ -1293,7 +1293,7 @@ shinyServer(function(input, output, session) {
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       "col.especiesdiv", # Id
-      "Selecione as especies", # nome que sera mostrado na UI
+      "Selecione as especies:", # nome que sera mostrado na UI
       choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
       selected = especies_names,     
       options = list(
@@ -1485,7 +1485,7 @@ shinyServer(function(input, output, session) {
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       "col.especiesmsim", # Id
-      "Selecione as especies", # nome que sera mostrado na UI
+      "Selecione as especies:", # nome que sera mostrado na UI
       choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
       selected = especies_names,     
       options = list(
@@ -1605,7 +1605,7 @@ shinyServer(function(input, output, session) {
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       "col.especiespsim", # Id
-      "Selecione as especies", # nome que sera mostrado na UI
+      "Selecione as especies:", # nome que sera mostrado na UI
       choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
       selected = especies_names,     
       options = list(

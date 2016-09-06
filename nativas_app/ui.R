@@ -43,13 +43,13 @@ shinyUI(
                           
                           radioButtons( # esta da ao usuario opcoes para clicar. Apenas uma e selecionada
                             inputId='sep',  #Id
-                            label='Separador', # nome que sera mostrado na UI
+                            label='Separador:', # nome que sera mostrado na UI
                             choices=c(Virgula=',', "Ponto e Virgula"=';', Tab='\t'), # opcoes e seus nomes
                             selected=','), # valor que sera selecionado inicialmente
                           
                           radioButtons( # esta da ao usuario opcoes para clicar. Apenas uma e selecionada
                             inputId='dec', # Id
-                            label='Decimal', # nome que sera mostrado na UI
+                            label='Decimal:', # nome que sera mostrado na UI
                             choices=c(Ponto=".", Virgula=","), # opcoes e seus nomes
                             selected="."), # valor que sera selecionado inicialmente
                           
