@@ -28,10 +28,12 @@ shinyUI(
                         
                         sidebarPanel(
                           
+                          h3("Importar Dados"),
+                          
                           fileInput( # input de arquivos
                             inputId = "file1", # Id
                             
-                            label = h3("Selecione o arquivo: (.csv, .txt ou .xlsx)"), # nome que sera mostrado na UI
+                            label = h4("Selecione o arquivo: (.csv, .txt ou .xlsx)"), # nome que sera mostrado na UI
                             
                             accept=c('text/csv/xlsx','.csv', ".txt", ".xlsx")), # tipos de arquivos aceitos
                           
@@ -600,7 +602,7 @@ shinyUI(
                         ) # tabPanel Sistematica
                         
                         
-                        
+                          # navbar Menu end ####
                         ),# navbar Menu
              
              # Painel Download ####
@@ -609,6 +611,8 @@ shinyUI(
                       sidebarLayout(
                         
                         sidebarPanel(
+                          
+                          h3("Download"),
                           
                           selectInput("dataset", "Escolha um Dataset:", 
                                       choices = c(
