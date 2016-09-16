@@ -91,13 +91,37 @@ estrutura = function(data, col.especies, col.dap, col.parcelas, area.parcela, es
   PLOTS = col.parcelas
   # alterei aqui para areaplot poder ser uma coluna do data frame
   if(is.numeric(area.parcela) ){AREA.PLOT = area.parcela}else(AREA.PLOT = mean(data[,area.parcela],na.rm = T ) )
+  
+  
+  # Coloquei estes dois if statements, para que o usuario possa deixar
+  # de preencher a variavel, e a funcao continue rodando
+  # (adicionei o "" por causa do app)
+  if(missing(est.vertical)||is.null(est.vertical)||est.vertical==F||est.vertical==""){
+    est.vertical = NA }
+  
+  if(missing(est.interno)||is.null(est.interno)||est.interno==F||est.interno==""){
+    est.interno = NA }
+  
+  
   VERTICAL = est.vertical
   INTERNA = est.interno
   NI = nao.identificada
   
   # Ajustar formato categórico
-  data[,VERTICAL] = as.factor(data[,VERTICAL])
-  data[,INTERNA] = as.factor(data[,INTERNA])
+  
+  # tive que colocar estes if statements aqui tambem,
+  # para caso as variaveis opcionais nao sejam inseridas
+  if(!is.na(est.vertical)){
+    
+    data[,VERTICAL] = as.factor(data[,VERTICAL])
+    
+  }
+  
+  if(!is.na(est.interno)){
+    
+    data[,INTERNA] = as.factor(data[,INTERNA])
+    
+  }
   
   # Remover NA
   data = data[!is.na(data[SPECIES]),]
@@ -140,8 +164,8 @@ estrutura = function(data, col.especies, col.dap, col.parcelas, area.parcela, es
   result["FR"] = round(FR, 4)
   
   # Calcula densidade absoluta e relativa
-  
-  DA = pivot[2] / (nplots * (AREA.PLOT/10000) ) # Media para poder aceitar vetores como entrada
+  # Alterei aqui para a area poder ser inserida em m2
+  DA = pivot[2] / (nplots * (AREA.PLOT/10000) )
   result["DA"] = round(DA, 4)
   
   AcDAi = sum(DA)    
@@ -154,6 +178,7 @@ estrutura = function(data, col.especies, col.dap, col.parcelas, area.parcela, es
   AB = tapply(data[,"AB"], data[,SPECIES], sum)
   AB = AB[which(names(AB) %in% espList)]
   
+  # Alterei aqui para a area poder ser inserida em m2
   DoA = AB / (nplots * (AREA.PLOT/10000) )
   result["DoA"] = round(DoA, 6)
   
@@ -962,21 +987,21 @@ as_diffs <- function(df, area_total, area_parcela, VCC, idade, grupos, alpha = 0
 
 # vectors for names ####
 
-especies_names <- c("scientific.name","Scientific.Name","SCIENTIFIC.NAME" ,"scientific_name", "Scientific_Name","SCIENTIFIC_NAME","nome.cientifico", "Nome.Cientifico","NOME.CIENTIFICO","nome_cientifico", "Nome_Cientifico","NOME_CIENTIFICO")
-parcelas_names <- c("transect", "Transect", "TRNASECT", "transect.code","Transect.Code","TRANSECT.CODE","transect_code","Transect_Code","TRANSECT_CODE","parcela", "Parcela","PARCELA","cod.parcela","Cod.Parcela","COD.PARCELA", "cod_parcela","Cod_Parcela","COD_PARCELA")
-est.vertical_names <- c("canopy", "canopy_09")
-est.interno_names <- c("light", "light_09")
+especies_names <- c("nome.cient","scientific.name","Scientific.Name","SCIENTIFIC.NAME" ,"scientific_name", "Scientific_Name","SCIENTIFIC_NAME","nome.cientifico", "Nome.Cientifico","NOME.CIENTIFICO","nome_cientifico", "Nome_Cientifico","NOME_CIENTIFICO")
+parcelas_names <- c("transecto","transect", "Transect", "TRNASECT", "transect.code","Transect.Code","TRANSECT.CODE","transect_code","Transect_Code","TRANSECT_CODE","parcela", "Parcela","PARCELA","cod.parcela","Cod.Parcela","COD.PARCELA", "cod_parcela","Cod_Parcela","COD_PARCELA")
+est.vertical_names <- c("pos.copa","canopy", "canopy_09")
+est.interno_names <- c("luminosidade","light", "light_09")
 
 
 DAP_names <- c("DAP","Dap","dap", "dbh", "Dbh","DBH","DBH_11")
 HT_names <- c("HT_EST", "HT", "Ht", "ht","Htot","ALTURA","Altura","Altura_Total", "ALTURA_TOTAL")
-VCC_names <- c("VCC","Vcc", "vcc", "VOL", "Vol", "VOLUME")
-area_parcela_names <- c("AREA_PARCELA","Area_Parcela","area_parcela", "AREAPARCELA", "areaparcela", "transect.area", "Transect.Area", "TRANSECT.AREA","transect_area","Transect_Area","TRANSECT_AREA")
-area_total_names <- c("AREA_TOTAL", "AREATOTAL", "area_total", "areatotal","AREA_TALHAO", "AREATALHAO", "area_talhao", "areatalhao","total.area","Total.Area","TOTAL.AREA","total_area","Total_Area","TOTAL_AREA")
+VCC_names <- c("VCC","Vcc", "vcc", "VOL", "Vol", "vol" ,"VOLUME")
+area_parcela_names <- c("trans.area","AREA_PARCELA","Area_Parcela","area_parcela", "AREAPARCELA", "areaparcela", "transect.area", "Transect.Area", "TRANSECT.AREA","transect_area","Transect_Area","TRANSECT_AREA")
+area_total_names <- c("sub.area","AREA_TOTAL", "AREATOTAL", "area_total", "areatotal","AREA_TALHAO", "AREATALHAO", "area_talhao", "areatalhao","total.area","Total.Area","TOTAL.AREA","total_area","Total_Area","TOTAL_AREA")
 idade_names <- c("IDADE", "Idade","idade")
 VSC_names <- c("VSC","Vsc", "vsc")
 HD_names <- c("HD", "Hd", "hd", "ALTURA_DOMINANTE", "ALT_DOM")
-grupos_names <- c(c("TALHAO", "PARCELA"), c("area.code", "transect"))
+grupos_names <- c(c("TALHAO", "PARCELA"), c("area.code", "transect"), c("codigo", "transecto"))
 estratos_names <- c("TALHAO", "Talhao", "talhao","COD_TALHAO","Cod_Talhao","cod_talhao", "COD.TALHAO", "Cod.Talhao","cod.talhao", "area.code", "Area.Code","AREA.CODE", "area_code","Area_Code","AREA_CODE")
 
 # Server ####
@@ -984,7 +1009,7 @@ estratos_names <- c("TALHAO", "Talhao", "talhao","COD_TALHAO","Cod_Talhao","cod_
 shinyServer(function(input, output, session) {
   
   
-  # Importar dados ####
+  # Importar os dados ####
   
   rawData <- reactive({ # Criamos uma nova funcao reactive. este sera o objeto filtrado, utilizado nos calculos
     
@@ -1020,7 +1045,7 @@ shinyServer(function(input, output, session) {
     
   })
   
-  # Agregacao ####
+  # Índices de agregacao ####
   
   tabagregate <- reactive({
     
@@ -1045,11 +1070,11 @@ shinyServer(function(input, output, session) {
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       "col.especiesagreg", # Id
-      "Selecione as especies:", # nome que sera mostrado na UI
+      "Selecione a coluna de espécies:", # nome que sera mostrado na UI
       choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
       selected = especies_names,     
       options = list(
-        placeholder = 'Selecione uma variavel abaixo'#,
+        placeholder = 'selecione uma coluna abaixo'#,
         #onInitialize = I('function() { this.setValue(""); }')
       ) # options    
       )
@@ -1062,11 +1087,11 @@ shinyServer(function(input, output, session) {
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       "col.parcelasagreg", # Id
-      "Selecione as parcelas:", # nome que sera mostrado na UI
+      "Selecione a coluna das parcelas:", # nome que sera mostrado na UI
       choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
       selected = parcelas_names,     
       options = list(
-        placeholder = 'Selecione uma variavel abaixo'#,
+        placeholder = 'selecione uma coluna abaixo'#,
         #onInitialize = I('function() { this.setValue(""); }')
       ) # options    
       )
@@ -1079,14 +1104,14 @@ shinyServer(function(input, output, session) {
     
     switch(input$CBagreg,
            "Manualmente" = textInput("rotutuloNIagreg", 
-                                   label = "Rotulo:", 
+                                   label = "Rotular:", 
                                    value = "NI"),
            
            "lista de especies" = selectizeInput("rotutuloNIagreg",
-                                                label = "Rotulo:",
+                                                label = "Rotular:",
                                                 choices = levels(as.factor(dados[,input$col.especiesagreg])),
                                                 options = list(
-                                                  placeholder = 'Selecione uma especie abaixo',
+                                                  placeholder = 'Selecione uma espécie abaixo',
                                                   onInitialize = I('function() { this.setValue(""); }')
                                                 ) # options    
                                                 )# selectize
@@ -1103,7 +1128,7 @@ shinyServer(function(input, output, session) {
       
       datatable( agregdt,
                  options = list(searching = T,
-                                paging=F )  ) 
+                                paging=T )  ) 
     }
     
   }) 
@@ -1138,11 +1163,11 @@ shinyServer(function(input, output, session) {
 
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       "col.especiesestr", # Id
-      "Selecione as especies:", # nome que sera mostrado na UI
+      "Selecione a coluna de espécies:", # nome que sera mostrado na UI
       choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
       selected = especies_names,     
       options = list(
-        placeholder = 'Selecione uma variavel abaixo'#,
+        placeholder = 'selecione uma coluna abaixo'#,
         #onInitialize = I('function() { this.setValue(""); }')
       ) # options    
     )
@@ -1155,11 +1180,11 @@ shinyServer(function(input, output, session) {
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       "col.dapestr", # Id
-      "Selecione o DAP (cm):", # nome que sera mostrado na UI
+      "Selecione a coluna do DAP (cm):", # nome que sera mostrado na UI
       choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
       selected = DAP_names,     
       options = list(
-        placeholder = 'Selecione uma variavel abaixo'#,
+        placeholder = 'selecione uma coluna abaixo'#,
         #onInitialize = I('function() { this.setValue(""); }')
       ) # options    
     )
@@ -1172,11 +1197,11 @@ shinyServer(function(input, output, session) {
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       "col.parcelasestr", # Id
-      "Selecione a var parcela:", # nome que sera mostrado na UI
+      "Selecione a coluna da parcela:", # nome que sera mostrado na UI
       choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
       selected = parcelas_names,     
       options = list(
-        placeholder = 'Selecione uma variavel abaixo'#,
+        placeholder = 'selecione uma coluna abaixo'#,
         #onInitialize = I('function() { this.setValue(""); }')
       ) # options    
     )
@@ -1189,45 +1214,11 @@ shinyServer(function(input, output, session) {
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       "area.parcelaestr", # Id
-      "Selecione a area da parcela (m²):", # nome que sera mostrado na UI
+      "Selecione a coluna da área da parcela (m²):", # nome que sera mostrado na UI
       choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
       selected = area_parcela_names,     
       options = list(
-        placeholder = 'Selecione uma variavel abaixo'#,
-        #onInitialize = I('function() { this.setValue(""); }')
-      ) # options    
-    )
-    
-  })
-  
-  output$selec_est.verticalestr <- renderUI({
-    
-    data <- rawData()
-    
-    selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
-      "est.verticalestr", # Id
-      "Selecione a estrutura vertical:", # nome que sera mostrado na UI
-      choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
-      selected = est.vertical_names,     
-      options = list(
-        placeholder = 'Selecione uma variavel abaixo'#,
-        #onInitialize = I('function() { this.setValue(""); }')
-      ) # options    
-    )
-    
-  })
-  
-  output$selec_est.internoestr <- renderUI({
-    
-    data <- rawData()
-    
-    selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
-      "est.internoestr", # Id
-      "Selecione a estrutura interna:", # nome que sera mostrado na UI
-      choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
-      selected = est.interno_names,     
-      options = list(
-        placeholder = 'Selecione uma variavel abaixo'#,
+        placeholder = 'selecione uma coluna abaixo'#,
         #onInitialize = I('function() { this.setValue(""); }')
       ) # options    
     )
@@ -1240,14 +1231,14 @@ shinyServer(function(input, output, session) {
     
     switch(input$CBestr,
            "Manualmente" = textInput("rotutuloNIestr", 
-                                     label = "Rotulo:", 
+                                     label = "Rotular:", 
                                      value = "NI"),
            
            "lista de especies" = selectizeInput("rotutuloNIestr",
-                                                label = "Rotulo:",
+                                                label = "Rotular:",
                                                 choices = levels(as.factor(dados[,input$col.especiesestr])),
                                                 options = list(
-                                                  placeholder = 'Selecione uma especie abaixo',
+                                                  placeholder = 'Selecione uma espécie abaixo',
                                                   onInitialize = I('function() { this.setValue(""); }')
                                                 ) # options    
            )# selectize
@@ -1256,16 +1247,51 @@ shinyServer(function(input, output, session) {
     
   })
   
+  output$selec_est.verticalestr <- renderUI({
+    
+    data <- rawData()
+    
+    selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
+      "est.verticalestr", # Id
+      "Selecione a coluna estrutura vertical:", # nome que sera mostrado na UI
+      choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
+      #selected = est.vertical_names,     
+      options = list(
+        placeholder = 'selecione uma coluna abaixo',
+        onInitialize = I('function() { this.setValue(""); }')
+      ) # options    
+    )
+    
+  })
+  
+  output$selec_est.internoestr <- renderUI({
+    
+    data <- rawData()
+    
+    selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
+      "est.internoestr", # Id
+      "Selecione a coluna estrutura interna:", # nome que sera mostrado na UI
+      choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
+      #selected = est.interno_names,     
+      options = list(
+        placeholder = 'selecione uma coluna abaixo',
+        onInitialize = I('function() { this.setValue(""); }')
+      ) # options    
+    )
+    
+  })
+  
+  
   # tabela
   output$estr <- renderDataTable({
     
     if(input$Loadestr)
     {
-      estrdt <- tabestrutura() 
+      estrdt <- round_df( tabestrutura(), input$cdestr )
       
       datatable( as.tbl(estrdt),
                  options = list(searching = T,
-                                paging=FALSE )  ) 
+                                paging=T )  ) 
     }
     
   }) 
@@ -1281,9 +1307,11 @@ shinyServer(function(input, output, session) {
       dados <- rawData()
       
       x <- diversidade(data             = dados, 
-                       col.especies     = input$col.especiesdiv)
+                       col.especies     = input$col.especiesdiv,
+                       rotulo.NI        = input$rotutuloNIdiv  ) %>% 
+        gather("Índice", "Resultado") # transpor tabela
       
-      x
+      x 
     }
     
   })
@@ -1295,16 +1323,39 @@ shinyServer(function(input, output, session) {
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       "col.especiesdiv", # Id
-      "Selecione as especies:", # nome que sera mostrado na UI
+      "Selecione a coluna de espécies:", # nome que sera mostrado na UI
       choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
       selected = especies_names,     
       options = list(
-        placeholder = 'Selecione uma variavel abaixo'#,
+        placeholder = 'selecione uma coluna abaixo'#,
         #onInitialize = I('function() { this.setValue(""); }')
       ) # options    
     )
     
   })
+  
+  output$selec_rotuloNIdiv <- renderUI({
+    
+    dados <- rawData()
+    
+    switch(input$CBdiv,
+           "Manualmente" = textInput("rotutuloNIdiv", 
+                                     label = "Rotular:", 
+                                     value = "NI"),
+           
+           "lista de especies" = selectizeInput("rotutuloNIdiv",
+                                                label = "Rotular:",
+                                                choices = levels(as.factor(dados[,input$col.especiesdiv])),
+                                                options = list(
+                                                  placeholder = 'Selecione uma espécie abaixo',
+                                                  onInitialize = I('function() { this.setValue(""); }')
+                                                ) # options    
+           )# selectize
+    )
+    
+    
+  })
+  
   
   # tabela
   output$div <- renderDataTable({
@@ -1370,11 +1421,11 @@ shinyServer(function(input, output, session) {
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       "col.parcelasBDq", # Id
-      "Selecione a var parcela:", # nome que sera mostrado na UI
+      "Selecione a coluna da parcela:", # nome que sera mostrado na UI
       choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
       selected = parcelas_names,     
       options = list(
-        placeholder = 'Selecione uma variavel abaixo'#,
+        placeholder = 'selecione uma coluna abaixo'#,
         #onInitialize = I('function() { this.setValue(""); }')
       ) # options    
     )
@@ -1387,11 +1438,11 @@ shinyServer(function(input, output, session) {
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       "col.dapBDq", # Id
-      "Selecione o DAP (cm):", # nome que sera mostrado na UI
+      "Selecione a coluna do DAP (cm):", # nome que sera mostrado na UI
       choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
       selected = DAP_names,     
       options = list(
-        placeholder = 'Selecione uma variavel abaixo'#,
+        placeholder = 'selecione uma coluna abaixo'#,
         #onInitialize = I('function() { this.setValue(""); }')
       ) # options    
     )
@@ -1404,11 +1455,11 @@ shinyServer(function(input, output, session) {
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       "area.parcelaBDq", # Id
-      "Selecione a area da parcela (m²):", # nome que sera mostrado na UI
+      "Selecione a coluna da área da parcela (m²):", # nome que sera mostrado na UI
       choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
       selected = area_parcela_names,     
       options = list(
-        placeholder = 'Selecione uma variavel abaixo'#,
+        placeholder = 'selecione uma coluna abaixo'#,
         #onInitialize = I('function() { this.setValue(""); }')
       ) # options    
     )
@@ -1487,11 +1538,11 @@ shinyServer(function(input, output, session) {
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       "col.especiesmsim", # Id
-      "Selecione as especies:", # nome que sera mostrado na UI
+      "Selecione a coluna de espécies:", # nome que sera mostrado na UI
       choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
       selected = especies_names,     
       options = list(
-        placeholder = 'Selecione uma variavel abaixo'#,
+        placeholder = 'selecione uma coluna abaixo'#,
         #onInitialize = I('function() { this.setValue(""); }')
       ) # options    
     )
@@ -1504,11 +1555,11 @@ shinyServer(function(input, output, session) {
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       "col.parcelasmsim", # Id
-      "Selecione a var parcela:", # nome que sera mostrado na UI
+      "Selecione a coluna da parcela:", # nome que sera mostrado na UI
       choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
       selected = parcelas_names,     
       options = list(
-        placeholder = 'Selecione uma variavel abaixo'#,
+        placeholder = 'selecione uma coluna abaixo'#,
         #onInitialize = I('function() { this.setValue(""); }')
       ) # options    
     )
@@ -1521,16 +1572,16 @@ shinyServer(function(input, output, session) {
     
     switch(input$CBmsim,
            "Manualmente" = textInput("rotutuloNImsim", 
-                                     label = "Rotulo:", 
+                                     label = "Rotular:", 
                                      value = "NI"),
            
            "lista de especies" = selectizeInput("rotutuloNImsim",
-                                                label = "Rotulo:",
+                                                label = "Rotular:",
                                                 choices = levels(
                                                   as.factor(
                                                     dados[,input$col.especiesmsim])),
                                                 options = list(
-                                                  placeholder = 'Selecione uma especie abaixo',
+                                                  placeholder = 'Selecione uma espécie abaixo',
                                                   onInitialize = I('function() { this.setValue(""); }')
                                                 ) # options    
            )# selectize
@@ -1607,11 +1658,11 @@ shinyServer(function(input, output, session) {
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       "col.especiespsim", # Id
-      "Selecione as especies:", # nome que sera mostrado na UI
+      "Selecione a coluna de espécies:", # nome que sera mostrado na UI
       choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
       selected = especies_names,     
       options = list(
-        placeholder = 'Selecione uma variavel abaixo'#,
+        placeholder = 'selecione uma coluna abaixo'#,
         #onInitialize = I('function() { this.setValue(""); }')
       ) # options    
     )
@@ -1624,11 +1675,11 @@ shinyServer(function(input, output, session) {
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       "col.parcelaspsim", # Id
-      "Selecione a var parcela:", # nome que sera mostrado na UI
+      "Selecione a coluna da parcela:", # nome que sera mostrado na UI
       choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
       selected = parcelas_names,     
       options = list(
-        placeholder = 'Selecione uma variavel abaixo'#,
+        placeholder = 'selecione uma coluna abaixo'#,
         #onInitialize = I('function() { this.setValue(""); }')
       ) # options    
     )
@@ -1647,7 +1698,7 @@ shinyServer(function(input, output, session) {
                    label = "Selecione a Parcela 1:",
                    choices = parcelas,
                    options = list(
-                     placeholder = 'Selecione uma especie abaixo',
+                     placeholder = 'Selecione uma espécie abaixo',
                      onInitialize = I('function() { this.setValue(""); }')
                    ) # options    
     )
@@ -1666,7 +1717,7 @@ shinyServer(function(input, output, session) {
                    label = "Selecione a Parcela 2:",
                    choices = parcelas,
                    options = list(
-                     placeholder = 'Selecione uma especie abaixo',
+                     placeholder = 'Selecione uma espécie abaixo',
                      onInitialize = I('function() { this.setValue(""); }')
                    ) # options    
     )
@@ -1679,16 +1730,16 @@ shinyServer(function(input, output, session) {
     
     switch(input$CBpsim,
            "Manualmente" = textInput("rotutuloNIpsim", 
-                                     label = "Rotulo:", 
+                                     label = "Rotular:", 
                                      value = "NI"),
            
            "lista de especies" = selectizeInput("rotutuloNIpsim",
-                                                label = "Rotulo:",
+                                                label = "Rotular:",
                                                 choices = levels(
                                                   as.factor(
                                                     dados[,input$col.especiespsim])),
                                                 options = list(
-                                                  placeholder = 'Selecione uma especie abaixo',
+                                                  placeholder = 'Selecione uma espécie abaixo',
                                                   onInitialize = I('function() { this.setValue(""); }')
                                                 ) # options    
            )# selectize
@@ -1712,7 +1763,7 @@ shinyServer(function(input, output, session) {
   }) 
   
   
-  # Nivel Parcela ####
+  # Totalização de Parcelas ####
   
   # dados / funcao inv_summary
   newData <- reactive({
@@ -1745,11 +1796,11 @@ shinyServer(function(input, output, session) {
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       'DAPnew', # Id
-      "DAP (cm):", # nome que sera mostrado na UI
+      "Selecione a coluna do DAP (cm):", # nome que sera mostrado na UI
       choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
       selected = DAP_names,
       options = list(
-        placeholder = 'Selecione uma variavel abaixo'# ,
+        placeholder = 'selecione uma coluna abaixo'# ,
         # onInitialize = I('function() { this.setValue(""); }')
       ) # options
     )
@@ -1762,11 +1813,11 @@ shinyServer(function(input, output, session) {
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       'HTnew', # Id
-      "HT (m):", # nome que sera mostrado na UI
+      "Selecione a coluna da altura (cm):", # nome que sera mostrado na UI
       choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
       selected = HT_names,
       options = list(
-        placeholder = 'Selecione uma variavel abaixo'#,
+        placeholder = 'selecione uma coluna abaixo'#,
         # onInitialize = I('function() { this.setValue(""); }')
       ) # options
     )
@@ -1779,11 +1830,11 @@ shinyServer(function(input, output, session) {
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       'VCCnew', # Id
-      "Volume com Casca (m³):", # nome que sera mostrado na UI
+      "Selecione a coluna do volume com casca (m³):", # nome que sera mostrado na UI
       choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
       selected = VCC_names,
       options = list(
-        placeholder = 'Selecione uma variavel abaixo'#,
+        placeholder = 'selecione uma coluna abaixo'#,
         #onInitialize = I('function() { this.setValue(""); }')
       ) # options
     )
@@ -1796,11 +1847,11 @@ shinyServer(function(input, output, session) {
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       'area_parcelanew', # Id
-      "Area da Parcela (m²):", # nome que sera mostrado na UI
+      "Selecione a coluna da área da parcela (m²):", # nome que sera mostrado na UI
       choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
       selected = area_parcela_names,
       options = list(
-        placeholder = 'Selecione uma variavel abaixo'#,
+        placeholder = 'selecione uma coluna abaixo'#,
         # onInitialize = I('function() { this.setValue(""); }')
       ) # options
     )
@@ -1813,12 +1864,12 @@ shinyServer(function(input, output, session) {
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       'gruposnew', # Id
-      "Grupo(s) (chaves):", # nome que sera mostrado na UI
+      "selecione as variáveis pivô:", # nome que sera mostrado na UI
       choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
       multiple = TRUE,
       selected = grupos_names,
       options = list(
-        placeholder = 'Selecione uma variavel abaixo'#,
+        placeholder = 'selecione uma coluna abaixo'#,
         #onInitialize = I('function() { this.setValue(""); }')
       ) # options
     )
@@ -1831,11 +1882,11 @@ shinyServer(function(input, output, session) {
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       'area_totalnew', # Id
-      "Area Total (ha):", # nome que sera mostrado na UI
+      "Selecione a coluna da área total (ha):", # nome que sera mostrado na UI
       choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
       selected = area_total_names,
       options = list(
-        placeholder = 'Selecione uma variavel abaixo'#,
+        placeholder = 'selecione uma coluna abaixo'#,
         #onInitialize = I('function() { this.setValue(""); }')
       ) # options
     )
@@ -1848,11 +1899,11 @@ shinyServer(function(input, output, session) {
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       'idadenew', # Id
-      "Idade (meses):", # nome que sera mostrado na UI
+      "Selecione a coluna da idade:", # nome que sera mostrado na UI
       choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
       #selected = idade_names,
       options = list(
-        placeholder = 'Selecione uma variavel abaixo',
+        placeholder = 'selecione uma coluna abaixo',
         onInitialize = I('function() { this.setValue(""); }')
       ) # options
     )
@@ -1865,11 +1916,11 @@ shinyServer(function(input, output, session) {
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       'VSCnew', # Id
-      "Volume sem Casca (m³):", # nome que sera mostrado na UI
+      "selecione a coluna do volume com casca (m³):", # nome que sera mostrado na UI
       choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
      # selected = VSC_names,
       options = list(
-        placeholder = 'Selecione uma variavel abaixo',
+        placeholder = 'selecione uma coluna abaixo',
          onInitialize = I('function() { this.setValue(""); }')
       ) # options
     )
@@ -1882,11 +1933,11 @@ shinyServer(function(input, output, session) {
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       'Hdnew', # Id
-      "Altura Dominante (HD) (m²):", # nome que sera mostrado na UI
+      "Selecione a coluna da altura dominante (m):", # nome que sera mostrado na UI
       choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
      # selected = HD_names,
       options = list(
-        placeholder = 'Selecione uma variavel abaixo',
+        placeholder = 'selecione uma coluna abaixo',
         onInitialize = I('function() { this.setValue(""); }')
       ) # options
     )
@@ -1948,11 +1999,11 @@ shinyServer(function(input, output, session) {
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       'area_totalacs', # Id
-      "Area Total (ha):", # nome que sera mostrado na UI
+      "Selecione a coluna da área total (ha):", # nome que sera mostrado na UI
       choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
       selected = area_total_names,     
       options = list(
-        placeholder = 'Selecione uma variavel abaixo'#,
+        placeholder = 'selecione uma coluna abaixo'#,
         #onInitialize = I('function() { this.setValue(""); }')
       ) # options
     )
@@ -1965,11 +2016,11 @@ shinyServer(function(input, output, session) {
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       'area_parcelaacs', # Id
-      "Area da Parcela (m²):", # nome que sera mostrado na UI
+      "Selecione a coluna da área da parcela (m²):", # nome que sera mostrado na UI
       choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
       selected = area_parcela_names,     
       options = list(
-        placeholder = 'Selecione uma variavel abaixo'#,
+        placeholder = 'selecione uma coluna abaixo'#,
         #onInitialize = I('function() { this.setValue(""); }')
       ) # options
     )
@@ -1982,11 +2033,11 @@ shinyServer(function(input, output, session) {
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       'VCCacs', # Id
-      "Volume (m³):", # nome que sera mostrado na UI
+      "Selecione a coluna do volume (m³):", # nome que sera mostrado na UI
       choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
       selected = VCC_names,     
       options = list(
-        placeholder = 'Selecione uma variavel abaixo'#,
+        placeholder = 'selecione uma coluna abaixo'#,
         # onInitialize = I('function() { this.setValue(""); }')
       ) # options
     )
@@ -1999,11 +2050,11 @@ shinyServer(function(input, output, session) {
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       'idadeacs', # Id
-      "Idade (meses):", # nome que sera mostrado na UI
+      "Selecione a coluna da idade:", # nome que sera mostrado na UI
       choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
       #selected = idade_names,     
       options = list(
-        placeholder = 'Selecione uma variavel abaixo',
+        placeholder = 'selecione uma coluna abaixo',
          onInitialize = I('function() { this.setValue(""); }')
       ) # options
     )
@@ -2016,7 +2067,7 @@ shinyServer(function(input, output, session) {
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       'gruposacs', # Id
-      "Grupos", # nome que sera mostrado na UI
+      "Selecione as variáveis pivô:", # nome que sera mostrado na UI
       choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
       multiple = TRUE,  # permite mais de uma opcao ser selecionada
       selected = NULL,     
@@ -2110,11 +2161,11 @@ shinyServer(function(input, output, session) {
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       'area_estratoace', # Id
-      "Area Total (ha):", # nome que sera mostrado na UI
+      "Selecione a coluna da área total (ha):", # nome que sera mostrado na UI
       choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
       selected = area_total_names,     
       options = list(
-        placeholder = 'Selecione uma variavel abaixo'#,
+        placeholder = 'selecione uma coluna abaixo'#,
         # onInitialize = I('function() { this.setValue(""); }')
       ) # options
     )
@@ -2127,11 +2178,11 @@ shinyServer(function(input, output, session) {
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       'area_parcelaace', # Id
-      "Area da Parcela (m²):", # nome que sera mostrado na UI
+      "Selecione a coluna da área da parcela (m²):", # nome que sera mostrado na UI
       choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
       selected = area_parcela_names,     
       options = list(
-        placeholder = 'Selecione uma variavel abaixo'#,
+        placeholder = 'selecione uma coluna abaixo'#,
         # onInitialize = I('function() { this.setValue(""); }')
       ) # options
     )
@@ -2144,11 +2195,11 @@ shinyServer(function(input, output, session) {
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       'VCCace', # Id
-      "Volume (m³):", # nome que sera mostrado na UI
+      "Selecione a coluna do volume (m³):", # nome que sera mostrado na UI
       choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
       selected = VCC_names,     
       options = list(
-        placeholder = 'Selecione uma variavel abaixo'#,
+        placeholder = 'selecione uma coluna abaixo'#,
         # onInitialize = I('function() { this.setValue(""); }')
       ) # options
     )
@@ -2161,7 +2212,7 @@ shinyServer(function(input, output, session) {
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       'gruposace', # Id
-      "Variavel(is) de estratificacao:", # nome que sera mostrado na UI
+      "Selecione a(s) coluna(s) para estratificação:", # nome que sera mostrado na UI
       choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
       multiple = TRUE,  # permite mais de uma opcao ser selecionada
       selected = estratos_names,     
@@ -2179,11 +2230,11 @@ shinyServer(function(input, output, session) {
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       'idadeace', # Id
-      "Idade (meses):", # nome que sera mostrado na UI
+      "Selecione a coluna da idade:", # nome que sera mostrado na UI
       choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
      # selected = idade_names,     
       options = list(
-        placeholder = 'Selecione uma variavel abaixo',
+        placeholder = 'selecione uma coluna abaixo',
          onInitialize = I('function() { this.setValue(""); }')
       ) # options
     )
@@ -2266,11 +2317,11 @@ shinyServer(function(input, output, session) {
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       'area_totalas', # Id
-      "Area Total (ha):", # nome que sera mostrado na UI
+      "Selecione a coluna da área total (ha):", # nome que sera mostrado na UI
       choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
       selected = area_total_names,     
       options = list(
-        placeholder = 'Selecione uma variavel abaixo'#,
+        placeholder = 'selecione uma coluna abaixo'#,
         # onInitialize = I('function() { this.setValue(""); }')
       ) # options
     )
@@ -2283,11 +2334,11 @@ shinyServer(function(input, output, session) {
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       'area_parcelaas', # Id
-      "Area da Parcela (m²):", # nome que sera mostrado na UI
+      "Selecione a coluna da área da parcela (m²):", # nome que sera mostrado na UI
       choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
       selected = area_parcela_names,     
       options = list(
-        placeholder = 'Selecione uma variavel abaixo'#,
+        placeholder = 'selecione uma coluna abaixo'#,
         #onInitialize = I('function() { this.setValue(""); }')
       ) # options
     )
@@ -2300,11 +2351,11 @@ shinyServer(function(input, output, session) {
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       'VCCas', # Id
-      "Volume (m³):", # nome que sera mostrado na UI
+      "Selecione a coluna do volume (m³):", # nome que sera mostrado na UI
       choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
       selected = VCC_names,     
       options = list(
-        placeholder = 'Selecione uma variavel abaixo'#,
+        placeholder = 'selecione uma coluna abaixo'#,
         # onInitialize = I('function() { this.setValue(""); }')
       ) # options
     )
@@ -2317,11 +2368,11 @@ shinyServer(function(input, output, session) {
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       'idadeas', # Id
-      "Idade (meses):", # nome que sera mostrado na UI
+      "Selecione a coluna da idade:", # nome que sera mostrado na UI
       choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
       #selected = idade_names,     
       options = list(
-        placeholder = 'Selecione uma variavel abaixo',
+        placeholder = 'selecione uma coluna abaixo',
         onInitialize = I('function() { this.setValue(""); }')
       ) # options
     )
@@ -2334,7 +2385,7 @@ shinyServer(function(input, output, session) {
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       'gruposas', # Id
-      "Grupos", # nome que sera mostrado na UI
+      "Selecione as variáveis pivô:", # nome que sera mostrado na UI
       choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
       multiple = TRUE,  # permite mais de uma opcao ser selecionada
       options = list(

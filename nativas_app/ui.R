@@ -28,7 +28,7 @@ shinyUI(
                         
                         sidebarPanel(
                           
-                          h3("Importar Dados"),
+                          h3("Importar os dados"),
                           
                           fileInput( # input de arquivos
                             inputId = "file1", # Id
@@ -40,6 +40,8 @@ shinyUI(
                           checkboxInput(inputId = "excel",
                                         label = "Excel (.xls ou .xslx) ?",
                                         value = F),
+                          
+                          div("Recomendados o uso do formato .csv", style = "color:blue"),
                           
                           radioButtons( # esta da ao usuario opcoes para clicar. Apenas uma e selecionada
                             inputId='sep',  #Id
@@ -67,23 +69,23 @@ shinyUI(
                       ) # sidebarLayout
              ), # tabPanel Upload  de dados
              
-             # Painel Agregate ####
-             tabPanel("Agregar",
+             # Painel I. de agregacao ####
+             tabPanel("I. de agregação",
                       sidebarLayout(
                         sidebarPanel(
                           
-                          h3("Agregar"),
+                          h3("Índices de agregação"),
                           
                           uiOutput("selec_especiesagreg"),
                           
                           uiOutput("selec_parcelasagreg"),
                           
-                          h4("Rotulo para especies nao identificadas:"),
+                          h4("Rotular espécies não identificadas:"),
                           
-                          selectizeInput("CBagreg",
-                                         "Escolher da lista de especies, ou inserir manualmente?",
-                                         c("lista de especies", "Manualmente"),
-                                         "Manualmente"),
+                          radioButtons("CBagreg",
+                                       "Escolher rótulo da lista de especies, ou inserir manualmente?",
+                                        c("lista de especies", "Manualmente"),
+                                       "Manualmente"),
 
                           uiOutput("selec_rotuloNIagreg"),
                           
@@ -117,19 +119,29 @@ shinyUI(
                    
                    uiOutput("selec_area.parcelaestr"),
                    
-                   uiOutput("selec_est.verticalestr"),
+                   h4("Rotular espécies não identificadas:"),
                    
-                   uiOutput("selec_est.internoestr"),
-                   
-                   h4("Rotulo para especies nao identificadas:"),
-                   
-                   selectizeInput("CBestr",
-                                  "Escolher da lista de especies, ou inserir manualmente?",
+                   radioButtons("CBestr",
+                                  "Escolher rótulo da lista de especies, ou inserir manualmente?",
                                   c("lista de especies", "Manualmente"),
                                   "Manualmente"),
                    
                    uiOutput("selec_rotuloNIestr"),
                    
+                   h3("Variaveis opcionais:"),
+                   
+                   uiOutput("selec_est.verticalestr"),
+                   
+                   uiOutput("selec_est.internoestr"),
+                   
+                   sliderInput("cdestr", 
+                               label = "Selecione o nº de casas decimais:", 
+                               min = 0, 
+                               max = 10, 
+                               value = 2,
+                               step = 1),
+                   
+                 
                    
                    actionButton( # botao que o usuario clica, e gera uma acao no server
                      "Loadestr", # Id
@@ -148,14 +160,23 @@ shinyUI(
              
              # Painel Diversidade ####
              
-             tabPanel("Diversidade",
+             tabPanel("I. de diversidade",
                sidebarLayout(
                              
                              sidebarPanel(
                                
-                               h3("Indices de Diversidade"),
+                               h3("Índices de diversidade"),
                                
                                uiOutput("selec_especiesdiv"),
+                               
+                               h4("Rotular espécies não identificadas:"),
+                               
+                               radioButtons("CBdiv",
+                                            "Escolher rótulo da lista de especies, ou inserir manualmente?",
+                                            c("lista de especies", "Manualmente"),
+                                            "Manualmente"),
+                               
+                               uiOutput("selec_rotuloNIdiv"),
                                
                                actionButton( # botao que o usuario clica, e gera uma acao no server
                                  "Loaddiv", # Id
@@ -164,7 +185,7 @@ shinyUI(
                                
                              ), # sidebar Panel
                              mainPanel(
-                               DT::dataTableOutput("div")
+                               DT::dataTableOutput("div", "70%")
                              ) # main Panel
                              
                )# Sidebar layout
@@ -187,14 +208,14 @@ shinyUI(
                           uiOutput("selec_area.parcelaBDq"),
                           
                           sliderInput("intervalo.classeBDq", 
-                                      label = "Intervalo de Classe:", 
+                                      label = "Intervalo de classe:", 
                                       min = 0, 
                                       max = 10, 
                                       value = 5,
                                       step = 1),
                           
                           sliderInput("min.dapBDq", 
-                                      label = "Dap Minimo:", 
+                                      label = "DAP mínimo::", 
                                       min = 0, 
                                       max = 10, 
                                       value = 5,
@@ -238,10 +259,10 @@ shinyUI(
                        
                        uiOutput("selec_parcelasmsim"),
                        
-                       h4("Rotulo para especies nao identificadas:"),
+                       h4("Rotular espécies não identificadas:"),
                        
                        selectizeInput("CBmsim",
-                                      "Escolher da lista de especies, ou inserir manualmente?",
+                                      "Escolher rótulo da lista de especies, ou inserir manualmente?",
                                       c("lista de especies", "Manualmente"),
                                       "Manualmente"),
                        
@@ -280,10 +301,10 @@ shinyUI(
                         uiOutput("selec_psimselec_parc2"),
                        
                        
-                       h4("Rotulo para especies nao identificadas:"),
+                       h4("Rotular espécies não identificadas:"),
                        
                        selectizeInput("CBpsim",
-                                      "Escolher da lista de especies, ou inserir manualmente?",
+                                      "Escolher rótulo da lista de especies, ou inserir manualmente?",
                                       c("lista de especies", "Manualmente"),
                                       "Manualmente"),
                        
@@ -306,17 +327,14 @@ shinyUI(
 
              navbarMenu("Inventario",
                         
-                        # Painel Nivel Parcela ####
-                        tabPanel("Nivel Arv/Parcela",
+                        # Painel Totalização de Parcelas ####
+                        tabPanel("Totalização de Parcelas",
                                  
                                  sidebarLayout(
                                    
                                    sidebarPanel(
                                      
-                                     h3("Nivel Arvore para Nivel Parcela"),
-                                     
-                                     
-                                     h4("Selecione as Variaveis:"),
+                                     h3("Totalização de Parcelas"),
                                      
                                      uiOutput("selec_DAPnew"),
                                      
@@ -386,38 +404,37 @@ shinyUI(
                                      
                                      uiOutput("selec_gruposacs"),
                                      
-                                     selectInput(
-                                       inputId='popacs', # Id
-                                       label='Populacao:', # nome que sera mostrado na UI
-                                       choices=c(Infinita="inf", Finita="fin"), # opcoes e seus nomes
-                                       selected="inf"
-                                     ),
-                                     
                                      sliderInput("cdacs", 
-                                                 label = "Casas Decimais:", 
+                                                 label = "Selecione o nº de casas decimais:", 
                                                  min = 0, 
                                                  max = 10, 
                                                  value = 4,
                                                  step = 1),
                                      
                                      sliderInput("alphaacs", 
-                                                 label = "alpha:", 
+                                                 label = "Selecione o nível de significância:", 
                                                  min = 0.01, 
                                                  max = 0.10, 
                                                  value = 0.05,
                                                  step = 0.01),
                                      
                                      sliderInput("erroacs", 
-                                                 label = "Erro admitido (%):", 
+                                                 label = "Selecione o erro admitido (%):", 
                                                  min = 1, 
                                                  max = 20, 
                                                  value = 10,
                                                  step = 1),
                                      
-                                     
-                                     selectInput( # esta da ao usuario opcoes para clicar. Apenas uma e selecionada
+                                     radioButtons(
+                                       inputId='popacs', # Id
+                                       label='Considerar a população infinita ou finita?', # nome que sera mostrado na UI
+                                       choices=c(Infinita="inf", Finita="fin"), # opcoes e seus nomes
+                                       selected="inf"
+                                     ),
+
+                                     radioButtons( # esta da ao usuario opcoes para clicar. Apenas uma e selecionada
                                        inputId="tidyacs",  #Id
-                                       label='Arranjo da tabela:', # nome que sera mostrado na UI
+                                       label='Selecione o arranjo da tabela:', # nome que sera mostrado na UI
                                        choices=c(Vertical = T, Horizontal = F), # opcoes e seus nomes
                                        selected=T), # valor que sera selecionado inicialmente
                                      
@@ -467,38 +484,37 @@ shinyUI(
                                      
                                      uiOutput("selec_idadeace"),
                                      
-                                     selectInput(
-                                       inputId='popace', # Id
-                                       label='Populacao:', # nome que sera mostrado na UI
-                                       choices=c(Infinita="inf", Finita="fin"), # opcoes e seus nomes
-                                       selected="inf"
-                                     ),
-                                     
-                                     
                                      sliderInput("cdace", 
-                                                 label = "Casas Decimais:", 
+                                                 label = "Selecione o nº de casas decimais:", 
                                                  min = 0, 
                                                  max = 10, 
                                                  value = 4,
                                                  step = 1),
                                      
                                      sliderInput("alphaace", 
-                                                 label = "alpha:", 
+                                                 label = "Selecione o nível de significância:", 
                                                  min = 0.01, 
                                                  max = 0.10, 
                                                  value = 0.05,
                                                  step = 0.01),
                                      
                                      sliderInput("erroace", 
-                                                 label = "Erro admitido (%):", 
+                                                 label = "Selecione o erro admitido (%):", 
                                                  min = 1, 
                                                  max = 20, 
                                                  value = 10,
                                                  step = 1),
                                      
-                                     selectInput( # esta da ao usuario opcoes para clicar. Apenas uma e selecionada
+                                     radioButtons(
+                                       inputId='popace', # Id
+                                       label='Considerar a população infinita ou finita?', # nome que sera mostrado na UI
+                                       choices=c(Infinita="inf", Finita="fin"), # opcoes e seus nomes
+                                       selected="inf"
+                                     ),
+
+                                     radioButtons( # esta da ao usuario opcoes para clicar. Apenas uma e selecionada
                                        inputId="tidyace",  #Id
-                                       label='Arranjo da tabela:', # nome que sera mostrado na UI
+                                       label='Selecione o arranjo da tabela:', # nome que sera mostrado na UI
                                        choices=c(Vertical = T, Horizontal = F), # opcoes e seus nomes
                                        selected=T), # valor que sera selecionado inicialmente
                                      
@@ -556,30 +572,30 @@ shinyUI(
                                      uiOutput("selec_gruposas"),
                                      
                                      sliderInput("cdas", 
-                                                 label = "Casas Decimais:", 
+                                                 label = "Selecione o nº de casas decimais:", 
                                                  min = 0, 
                                                  max = 10, 
                                                  value = 4,
                                                  step = 1),
                                      
                                      sliderInput("alphaas", 
-                                                 label = "alpha:", 
+                                                 label = "Selecione o nível de significância:", 
                                                  min = 0.01, 
                                                  max = 0.10, 
                                                  value = 0.05,
                                                  step = 0.01),
                                      
                                      sliderInput("erroas", 
-                                                 label = "Erro admitido (%):", 
+                                                 label = "Selecione o erro admitido (%):", 
                                                  min = 1, 
                                                  max = 20, 
                                                  value = 10,
                                                  step = 1),
                                      
                                      
-                                     selectInput( # esta da ao usuario opcoes para clicar. Apenas uma e selecionada
+                                     radioButtons( # esta da ao usuario opcoes para clicar. Apenas uma e selecionada
                                        inputId="tidyas",  #Id
-                                       label='Arranjo da tabela:', # nome que sera mostrado na UI
+                                       label='Selecione o arranjo da tabela:', # nome que sera mostrado na UI
                                        choices=c(Vertical = T, Horizontal = F), # opcoes e seus nomes
                                        selected=T), # valor que sera selecionado inicialmente
                                      
