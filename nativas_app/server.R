@@ -1095,7 +1095,7 @@ shinyServer(function(input, output, session) {
   rawData <- reactive({
     
     switch(input$df_select, 
-           "Fazer o upload" = upData(),
+           "Fazer o upload" = if(input$Load==0){return()}else{upData()},
            "Utilizar o dado de exemplo" = ex)
     
   })
