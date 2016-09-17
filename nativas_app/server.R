@@ -1453,6 +1453,8 @@ shinyServer(function(input, output, session) {
   
   output$selec_psimselec_parc1 <- renderUI({
     
+    if(is.null(input$col.parcelaspsim) || is.null(rawData()) ){return()}
+    
     dados <- rawData()
     
     parcelas <- levels(
@@ -1471,6 +1473,8 @@ shinyServer(function(input, output, session) {
   })
   
   output$selec_psimselec_parc2 <- renderUI({
+    
+    if(is.null(input$col.parcelaspsim) || is.null(rawData()) ){return()}
     
     dados <- rawData()
     
