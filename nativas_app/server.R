@@ -1827,7 +1827,7 @@ shinyServer(function(input, output, session) {
     data <- tabBDq1()
     
     graph_bdq <- data %>% 
-      select("x"                = CentroClasse, 
+      select("x"                       = CentroClasse, 
              "Distribuição observada"  = IndvHectare , 
              "Distribuição balanceada" = MeyerBalan  ) %>% 
       gather(class, y, -x, factor_key = T) %>% 
