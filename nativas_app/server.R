@@ -1096,7 +1096,7 @@ shinyServer(function(input, output, session) {
     
     switch(input$df_select, 
            "Fazer o upload" = upData(),
-           "Uilitzar o dado de exemplo" = ex)
+           "Utilizar o dado de exemplo" = ex)
     
   })
   
