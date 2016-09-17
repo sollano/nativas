@@ -1955,6 +1955,8 @@ shinyServer(function(input, output, session) {
   # switch que muda o dado a ser utilizado
   invData <- reactive({
     
+    if(is.null(input$df)){ return()}
+    
     switch(input$df, 
            "Dados em nivel de arvore" = newData(),
            "Dados em nivel de parcela" = rawData() )
@@ -1991,11 +1993,14 @@ shinyServer(function(input, output, session) {
   })
   
   # UI
-  output$selec_DAPnew <- renderUI({
+  output$tot_parc_ui <- renderUI({
     
-  
     data <- rawData()
     
+    list(
+    
+    h3("Totalização de Parcelas"),
+      
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       'DAPnew', # Id
       "Selecione a coluna do DAP (cm):", # nome que sera mostrado na UI
@@ -2005,13 +2010,7 @@ shinyServer(function(input, output, session) {
         placeholder = 'selecione uma coluna abaixo'# ,
         # onInitialize = I('function() { this.setValue(""); }')
       ) # options
-    )
-    
-  })
-  
-  output$selec_HTnew <- renderUI({
-    
-    data <- rawData()
+    ),
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       'HTnew', # Id
@@ -2022,14 +2021,8 @@ shinyServer(function(input, output, session) {
         placeholder = 'selecione uma coluna abaixo'#,
         # onInitialize = I('function() { this.setValue(""); }')
       ) # options
-    )
-    
-  })
-  
-  output$selec_VCCnew <- renderUI({
-    
-    data <- rawData()
-    
+    ),
+
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       'VCCnew', # Id
       "Selecione a coluna do volume com casca (m³):", # nome que sera mostrado na UI
@@ -2039,13 +2032,7 @@ shinyServer(function(input, output, session) {
         placeholder = 'selecione uma coluna abaixo'#,
         #onInitialize = I('function() { this.setValue(""); }')
       ) # options
-    )
-    
-  })
-  
-  output$selec_area_parcelanew <- renderUI({
-    
-    data <- rawData()
+    ),
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       'area_parcelanew', # Id
@@ -2056,13 +2043,7 @@ shinyServer(function(input, output, session) {
         placeholder = 'selecione uma coluna abaixo'#,
         # onInitialize = I('function() { this.setValue(""); }')
       ) # options
-    )
-    
-  })
-  
-  output$selec_gruposnew <- renderUI({
-    
-    data <- rawData()
+    ),
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       'gruposnew', # Id
@@ -2074,13 +2055,9 @@ shinyServer(function(input, output, session) {
         placeholder = 'selecione uma coluna abaixo'#,
         #onInitialize = I('function() { this.setValue(""); }')
       ) # options
-    )
+    ),
     
-  })
-  
-  output$selec_area_totalnew <- renderUI({
-    
-    data <- rawData()
+    h3("Variaveis opcionais:"),
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       'area_totalnew', # Id
@@ -2091,13 +2068,7 @@ shinyServer(function(input, output, session) {
         placeholder = 'selecione uma coluna abaixo'#,
         #onInitialize = I('function() { this.setValue(""); }')
       ) # options
-    )
-    
-  })
-  
-  output$selec_idadenew <- renderUI({
-    
-    data <- rawData()
+    ),
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       'idadenew', # Id
@@ -2108,44 +2079,35 @@ shinyServer(function(input, output, session) {
         placeholder = 'selecione uma coluna abaixo',
         onInitialize = I('function() { this.setValue(""); }')
       ) # options
-    )
-    
-  })
-  
-  output$selec_VSCnew <- renderUI({
-    
-    data <- rawData()
+    ),
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       'VSCnew', # Id
       "selecione a coluna do volume com casca (m³):", # nome que sera mostrado na UI
       choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
-     # selected = VSC_names,
+      # selected = VSC_names,
       options = list(
         placeholder = 'selecione uma coluna abaixo',
-         onInitialize = I('function() { this.setValue(""); }')
+        onInitialize = I('function() { this.setValue(""); }')
       ) # options
-    )
-    
-  })
-  
-  output$selec_HDnew <- renderUI({
-    
-    data <- rawData()
+    ),
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       'Hdnew', # Id
       "Selecione a coluna da altura dominante (m):", # nome que sera mostrado na UI
       choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
-     # selected = HD_names,
+      # selected = HD_names,
       options = list(
         placeholder = 'selecione uma coluna abaixo',
         onInitialize = I('function() { this.setValue(""); }')
       ) # options
+    )    
+    
     )
     
   })
-  
+ 
+
   # tabela
   output$newdata <- renderDataTable({ # renderizamos uma DT::DataTable
     
@@ -2186,10 +2148,14 @@ shinyServer(function(input, output, session) {
   
   # UI: as opcoes (choices) sao os nomes de invData
   
-  output$selec_area_totalacs <- renderUI({
+  output$acs_ui <- renderUI({
     
     data <- invData()
+  
+    list(
     
+    h3("Amostragem Casual Simples"),
+      
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       'area_totalacs', # Id
       "Selecione a coluna da área total (ha):", # nome que sera mostrado na UI
@@ -2199,13 +2165,7 @@ shinyServer(function(input, output, session) {
         placeholder = 'selecione uma coluna abaixo'#,
         #onInitialize = I('function() { this.setValue(""); }')
       ) # options
-    )
-    
-  })
-  
-  output$selec_area_parcelaacs <- renderUI({
-    
-    data <- invData()
+    ),
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       'area_parcelaacs', # Id
@@ -2216,13 +2176,7 @@ shinyServer(function(input, output, session) {
         placeholder = 'selecione uma coluna abaixo'#,
         #onInitialize = I('function() { this.setValue(""); }')
       ) # options
-    )
-    
-  })
-  
-  output$selec_VCCacs <- renderUI({
-    
-    data <- invData()
+    ),
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       'VCCacs', # Id
@@ -2233,13 +2187,9 @@ shinyServer(function(input, output, session) {
         placeholder = 'selecione uma coluna abaixo'#,
         # onInitialize = I('function() { this.setValue(""); }')
       ) # options
-    )
+    ),
     
-  })
-  
-  output$selec_idadeacs <- renderUI({
-    
-    data <- invData()
+    h4("Variaveis opcionais:"),
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       'idadeacs', # Id
@@ -2248,15 +2198,9 @@ shinyServer(function(input, output, session) {
       #selected = idade_names,     
       options = list(
         placeholder = 'selecione uma coluna abaixo',
-         onInitialize = I('function() { this.setValue(""); }')
+        onInitialize = I('function() { this.setValue(""); }')
       ) # options
-    )
-    
-  })
-  
-  output$selec_gruposacs <- renderUI({
-    
-    data <- invData()
+    ),
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       'gruposacs', # Id
@@ -2268,9 +2212,45 @@ shinyServer(function(input, output, session) {
         placeholder = 'Selecione as variaveis abaixo',
         onInitialize = I('function() { this.setValue(""); }')
       ) # options
-    )
+    ),
     
+    sliderInput("cdacs", 
+                label = "Selecione o nº de casas decimais:", 
+                min = 0, 
+                max = 10, 
+                value = 4,
+                step = 1),
+    
+    sliderInput("alphaacs", 
+                label = "Selecione o nível de significância:", 
+                min = 0.01, 
+                max = 0.10, 
+                value = 0.05,
+                step = 0.01),
+    
+    sliderInput("erroacs", 
+                label = "Selecione o erro admitido (%):", 
+                min = 1, 
+                max = 20, 
+                value = 10,
+                step = 1),
+    
+    radioButtons(
+      inputId='popacs', # Id
+      label='Considerar a população infinita ou finita?', # nome que sera mostrado na UI
+      choices=c(Infinita="inf", Finita="fin"), # opcoes e seus nomes
+      selected="inf"
+    ),
+    
+    radioButtons( # esta da ao usuario opcoes para clicar. Apenas uma e selecionada
+      inputId="tidyacs",  #Id
+      label='Selecione o arranjo da tabela:', # nome que sera mostrado na UI
+      choices=c(Vertical = T, Horizontal = F), # opcoes e seus nomes
+      selected=T) # valor que sera selecionado inicialmente
+    
+    )
   })
+  
   # tabela
   output$acs <- renderDataTable({
     
@@ -2339,10 +2319,14 @@ shinyServer(function(input, output, session) {
   
   # UI: as opcoes (choices) sao os nomes de invData
   
-  output$selec_area_totalace <- renderUI({
+  output$ace_ui <- renderUI({
     
     data <- invData()
     
+    list(
+    
+    h3("Amostragem Casual Estratificada"),
+      
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       'area_estratoace', # Id
       "Selecione a coluna da área total (ha):", # nome que sera mostrado na UI
@@ -2352,13 +2336,7 @@ shinyServer(function(input, output, session) {
         placeholder = 'selecione uma coluna abaixo'#,
         # onInitialize = I('function() { this.setValue(""); }')
       ) # options
-    )
-    
-  }) 
-  
-  output$selec_area_parcelaace <- renderUI({
-    
-    data <- invData()
+    ),
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       'area_parcelaace', # Id
@@ -2369,13 +2347,7 @@ shinyServer(function(input, output, session) {
         placeholder = 'selecione uma coluna abaixo'#,
         # onInitialize = I('function() { this.setValue(""); }')
       ) # options
-    )
-    
-  })
-  
-  output$selec_VCCace <- renderUI({
-    
-    data <- invData()
+    ),
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       'VCCace', # Id
@@ -2386,13 +2358,7 @@ shinyServer(function(input, output, session) {
         placeholder = 'selecione uma coluna abaixo'#,
         # onInitialize = I('function() { this.setValue(""); }')
       ) # options
-    )
-    
-  })
-  
-  output$selec_gruposace <- renderUI({
-    
-    data <- invData()
+    ),
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       'gruposace', # Id
@@ -2404,26 +2370,57 @@ shinyServer(function(input, output, session) {
         placeholder = 'Selecione as variaveis abaixo'#,
         # onInitialize = I('function() { this.setValue(""); }')
       ) # options
-    )
+    ),
     
-  })
-  
-  output$selec_idadeace <- renderUI({
-    
-    data <- invData()
+    h4("Variaveis opcionais:"),
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       'idadeace', # Id
       "Selecione a coluna da idade:", # nome que sera mostrado na UI
       choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
-     # selected = idade_names,     
+      # selected = idade_names,     
       options = list(
         placeholder = 'selecione uma coluna abaixo',
-         onInitialize = I('function() { this.setValue(""); }')
+        onInitialize = I('function() { this.setValue(""); }')
       ) # options
-    )
+    ),
     
-  })
+    sliderInput("cdace", 
+                label = "Selecione o nº de casas decimais:", 
+                min = 0, 
+                max = 10, 
+                value = 4,
+                step = 1),
+    
+    sliderInput("alphaace", 
+                label = "Selecione o nível de significância:", 
+                min = 0.01, 
+                max = 0.10, 
+                value = 0.05,
+                step = 0.01),
+    
+    sliderInput("erroace", 
+                label = "Selecione o erro admitido (%):", 
+                min = 1, 
+                max = 20, 
+                value = 10,
+                step = 1),
+    
+    radioButtons(
+      inputId='popace', # Id
+      label='Considerar a população infinita ou finita?', # nome que sera mostrado na UI
+      choices=c(Infinita="inf", Finita="fin"), # opcoes e seus nomes
+      selected="inf"
+    ),
+    
+    radioButtons( # esta da ao usuario opcoes para clicar. Apenas uma e selecionada
+      inputId="tidyace",  #Id
+      label='Selecione o arranjo da tabela:', # nome que sera mostrado na UI
+      choices=c(Vertical = T, Horizontal = F), # opcoes e seus nomes
+      selected=T) # valor que sera selecionado inicialmente
+    
+    )
+  }) 
   
   # tabela ace1
   output$ace1 <- renderDataTable({
@@ -2486,10 +2483,16 @@ shinyServer(function(input, output, session) {
   
   # UI: as opcoes (choices) sao os nomes de invData
   
-  output$selec_area_totalas <- renderUI({
+  output$as_ui <- renderUI({
     
     data <- invData()
+   
+    list(
+      
+    h3("Amostragem Sistematica"),
     
+    helpText("Utiliza-se o método das diferenças sucessivas, portanto, assume-se que os dados estão organizados de forma ordenada."),
+      
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       'area_totalas', # Id
       "Selecione a coluna da área total (ha):", # nome que sera mostrado na UI
@@ -2499,13 +2502,7 @@ shinyServer(function(input, output, session) {
         placeholder = 'selecione uma coluna abaixo'#,
         # onInitialize = I('function() { this.setValue(""); }')
       ) # options
-    )
-    
-  })
-  
-  output$selec_area_parcelaas <- renderUI({
-    
-    data <- invData()
+    ),
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       'area_parcelaas', # Id
@@ -2516,13 +2513,7 @@ shinyServer(function(input, output, session) {
         placeholder = 'selecione uma coluna abaixo'#,
         #onInitialize = I('function() { this.setValue(""); }')
       ) # options
-    )
-    
-  })
-  
-  output$selec_VCCas <- renderUI({
-    
-    data <- invData()
+    ),
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       'VCCas', # Id
@@ -2533,13 +2524,9 @@ shinyServer(function(input, output, session) {
         placeholder = 'selecione uma coluna abaixo'#,
         # onInitialize = I('function() { this.setValue(""); }')
       ) # options
-    )
+    ),
     
-  })
-  
-  output$selec_idadeas <- renderUI({
-    
-    data <- invData()
+    h4("Variaveis opcionais:"),
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       'idadeas', # Id
@@ -2550,13 +2537,7 @@ shinyServer(function(input, output, session) {
         placeholder = 'selecione uma coluna abaixo',
         onInitialize = I('function() { this.setValue(""); }')
       ) # options
-    )
-    
-  })
-  
-  output$selec_gruposas <- renderUI({
-    
-    data <- invData()
+    ),
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       'gruposas', # Id
@@ -2567,8 +2548,37 @@ shinyServer(function(input, output, session) {
         placeholder = 'Selecione as variaveis abaixo',
         onInitialize = I('function() { this.setValue(""); }')
       ) # options
-    )
+    ),
     
+    sliderInput("cdas", 
+                label = "Selecione o nº de casas decimais:", 
+                min = 0, 
+                max = 10, 
+                value = 4,
+                step = 1),
+    
+    sliderInput("alphaas", 
+                label = "Selecione o nível de significância:", 
+                min = 0.01, 
+                max = 0.10, 
+                value = 0.05,
+                step = 0.01),
+    
+    sliderInput("erroas", 
+                label = "Selecione o erro admitido (%):", 
+                min = 1, 
+                max = 20, 
+                value = 10,
+                step = 1),
+    
+    
+    radioButtons( # esta da ao usuario opcoes para clicar. Apenas uma e selecionada
+      inputId="tidyas",  #Id
+      label='Selecione o arranjo da tabela:', # nome que sera mostrado na UI
+      choices=c(Vertical = T, Horizontal = F), # opcoes e seus nomes
+      selected=T)
+
+    )
   })
   
   # tabela as
