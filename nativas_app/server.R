@@ -1252,7 +1252,7 @@ shinyServer(function(input, output, session) {
   }) 
   
   # graficos 
-  output$msim1_graph <- renderPlot({
+  msim1_graph <- reactive({
     
     if(input$Loadmsim)
     {
@@ -1263,14 +1263,28 @@ shinyServer(function(input, output, session) {
       
       ms_hclust <- hclust(as.dist(ms) ) #?
       
-      ggdendrogram(ms_hclust)
+      x <- ggdendrogram(ms_hclust)
+      
+      x
       
       }
     
     
     
   })
-  output$msim2_graph <- renderPlot({
+  
+  output$msim1_graph_ <- renderPlot({
+    
+    
+      
+    g <- msim1_graph()
+    
+    g
+    
+  })
+  
+  
+  msim2_graph <- reactive({
     
     if(input$Loadmsim)
     {
@@ -1281,14 +1295,23 @@ shinyServer(function(input, output, session) {
       
       ms_hclust <- hclust(as.dist(ms) ) #?
       
-      ggdendrogram(ms_hclust)
+      x <- ggdendrogram(ms_hclust)
       
+      x
     }
     
     
     
   })
   
+  output$msim2_graph_ <- renderPlot({
+    
+   g <- msim2_graph()
+   
+   g
+    
+    
+  })
   
   # Pareado Similaridade ####
   # funcao p similaridade
@@ -1819,31 +1842,39 @@ shinyServer(function(input, output, session) {
 
   # grafico
   
-
-  output$BDqgraph <- renderPlot({
+  BDq_graph <- reactive({
     
     if(input$LoadBDq){
-    
-    data <- tabBDq1()
-    
-    graph_bdq <- data %>% 
-      select("x"                       = CentroClasse, 
-             "Distribuição observada"  = IndvHectare , 
-             "Distribuição balanceada" = MeyerBalan  ) %>% 
-      gather(class, y, -x, factor_key = T) %>% 
-      arrange(x) %>% 
-      mutate(x = as.factor(x) )
-    
-    x <-  ggplot(graph_bdq, aes(x = x, y = y) ) + 
-      geom_bar(aes(fill = class), stat = "identity",position = "dodge") +
-      labs(x = "Classe de diâmetro (cm)", y = "Número de indivíduos (ha)", fill = NULL) + 
-      scale_fill_manual(values =c("firebrick2", "cyan3") ) +
-      theme_hc(base_size = 14) 
-    #theme_igray(base_size = 14)
-    
-    x
+      
+      data <- tabBDq1()
+      
+      graph_bdq <- data %>% 
+        select("x"                       = CentroClasse, 
+               "Distribuição observada"  = IndvHectare , 
+               "Distribuição balanceada" = MeyerBalan  ) %>% 
+        gather(class, y, -x, factor_key = T) %>% 
+        arrange(x) %>% 
+        mutate(x = as.factor(x) )
+      
+      x <-  ggplot(graph_bdq, aes(x = x, y = y) ) + 
+        geom_bar(aes(fill = class), stat = "identity",position = "dodge") +
+        labs(x = "Classe de diâmetro (cm)", y = "Número de indivíduos (ha)", fill = NULL) + 
+        scale_fill_manual(values =c("firebrick2", "cyan3") ) +
+        theme_hc(base_size = 14) 
+      #theme_igray(base_size = 14)
+      
+      x
     }
     
+    
+  })
+
+  output$BDq_graph_ <- renderPlot({
+    
+   g <- BDq_graph()
+   
+   g 
+   
   })
   
   # Inventario ####
@@ -2486,7 +2517,7 @@ shinyServer(function(input, output, session) {
     
   })
   
-  # Download ####
+  # Download tabelas ####
   
   datasetInput <- reactive({
     switch(input$dataset,
@@ -2543,5 +2574,50 @@ shinyServer(function(input, output, session) {
       
     }
   )
+  
+  # Download graficos ####
+  
+  graphInput <- reactive({
+    switch(input$graph_d,
+           "Distribuicao - BDq Meyer"  = BDq_graph(),
+           "Dendrograma - Jaccard"     = msim1_graph(),
+           "Dendrograma - Sorensen"    = msim2_graph() )
+  })
+  
+  output$graph_d_out <- renderPlot({
+    
+    g <- graphInput()
+    
+    g
+
+    
+  }) 
+  
+  output$downloadGraph <- downloadHandler(
+    filename = function() { 
+      
+      if(input$graphformat==".png")
+      {
+        paste(input$graph_d, '.png', sep='') 
+      }
+      else if(input$graphformat==".jpg")
+      {
+        paste(input$graph_d, '.jpg', sep='') 
+      }
+      else if(input$graphformat==".pdf")
+      {
+        paste(input$graph_d, '.pdf', sep='') 
+      }
+      
+    },
+    
+    content = function(file) {
+
+        ggsave(file, graphInput(), width = 12, height = 6 )
+
+      
+    }
+  )
+  
   
 })

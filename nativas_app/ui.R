@@ -146,9 +146,9 @@ shinyUI(
                                    mainPanel(
                                      tabsetPanel(
                                        tabPanel("Jaccard", DT::dataTableOutput("msim1") ),
-                                       tabPanel("Dendrograma Jaccard", plotOutput("msim1_graph")),
+                                       tabPanel("Dendrograma Jaccard", plotOutput("msim1_graph_")),
                                        tabPanel("Sorensen", DT::dataTableOutput("msim2") ),
-                                       tabPanel("Dendrograma Sorensen", plotOutput("msim2_graph") )  )
+                                       tabPanel("Dendrograma Sorensen", plotOutput("msim2_graph_") )  )
                                    ) # main Panel
                                    
                                  )# Sidebar layout
@@ -332,7 +332,7 @@ shinyUI(
                      mainPanel(
                        tabsetPanel(
                          tabPanel("BDq", DT::dataTableOutput("BDq1") ),
-                         tabPanel("Gráfico", plotOutput( "BDqgraph" ) ),
+                         tabPanel("Gráfico", plotOutput( "BDq_graph_" ) ),
                          tabPanel("Coeficientes", DT::dataTableOutput("BDq3", "70%") )
                        )
                        
@@ -618,46 +618,83 @@ shinyUI(
                           # navbar Menu end ####
                         ),# navbar Menu inventario
              
-             # Painel Download ####
-             
-             tabPanel("Download", 
-                      sidebarLayout(
-                        
-                        sidebarPanel(
-                          
-                          h3("Download"),
-                          
-                          selectInput("dataset", "Escolha um Dataset:", 
-                                      choices = c(
-                                        "Agregar",
-                                        "Estrutura",
-                                        "Diversidade",
-                                        "BDq Meyer",
-                                        "BDq Meyer - Coeficientes",
-                                        "Matriz Similaridade - Jaccard",
-                                        "Matriz Similaridade - Sorensen",
-                                        "Pareado Similaridade",
-                                        "Amostragem Casual Simples", 
-                                        "Amostragem Casual Estratificada 1", 
-                                        "Amostragem Casual Estratificada 2",
-                                        "Amostragem Sistematica",
-                                        "Nivel Parcela")),
-                          
-                          selectInput("datasetformat",
-                                      "Escolha o Formato do Dataset:",
-                                      choices = c("Valor separado por Virgulas (.CSV)" = ".csv",
-                                                  "Planilha do Excel (.xlsx)" = ".xlsx")
-                          ),
-                          
-                          downloadButton('downloadData', 'Download')
-                          
-                        ),
-                        mainPanel(
-                          DT::dataTableOutput('table')      
-                        )
-                      )
-             )
-             
+             # NavbarMenu Download ####
+          
+          navbarMenu("Download",
+                     # Painel Download Tabelas ####
+                     
+                     tabPanel("Download de tabelas", 
+                              sidebarLayout(
+                                
+                                sidebarPanel(
+                                  
+                                  h3("Download de tabelas"),
+                                  
+                                  selectInput("dataset", "Escolha uma tabela:", 
+                                              choices = c(
+                                                "Agregar",
+                                                "Estrutura",
+                                                "Diversidade",
+                                                "BDq Meyer",
+                                                "BDq Meyer - Coeficientes",
+                                                "Matriz Similaridade - Jaccard",
+                                                "Matriz Similaridade - Sorensen",
+                                                "Pareado Similaridade",
+                                                "Amostragem Casual Simples", 
+                                                "Amostragem Casual Estratificada 1", 
+                                                "Amostragem Casual Estratificada 2",
+                                                "Amostragem Sistematica",
+                                                "Nivel Parcela")),
+                                  
+                                  selectInput("datasetformat",
+                                              "Escolha o Formato da tabela:",
+                                              choices = c("Valor separado por Virgulas (.CSV)" = ".csv",
+                                                          "Planilha do Excel (.xlsx)" = ".xlsx")
+                                  ),
+                                  
+                                  downloadButton('downloadData', 'Download')
+                                  
+                                ),
+                                mainPanel(
+                                  DT::dataTableOutput('table')      
+                                )
+                              )
+                     ), # download tabelas
+                     
+                     # Painel Download Graficos ####
+                     
+                     tabPanel("Download de graficos", 
+                              sidebarLayout(
+                                
+                                sidebarPanel(
+                                  
+                                  h3("Download de graficos"),
+                                  
+                                  selectInput("graph_d", "Escolha uma grafico:", 
+                                              choices = c(
+                                               "Distribuicao - BDq Meyer",
+                                                "Dendrograma - Jaccard",
+                                                "Dendrograma - Sorensen" )),
+                                  
+                                  selectInput("graphformat",
+                                              "Escolha o formato do gráfico:",
+                                              choices = c("PNG" = ".png",
+                                                          "JPG" = ".jpg",
+                                                          "PDF" = ".pdf") ),
+                                  
+                                  downloadButton('downloadGraph', 'Download')
+                                  
+                                ),
+                                mainPanel(
+                                  plotOutput("graph_d_out")      
+                                )
+                              )
+                     ) # download graficos
+                     
+                     # final navbarMenu download ####           
+          )
+          
+  
              # final da UI  ####    
   )# navbarPage
 ) # ShinyUI
