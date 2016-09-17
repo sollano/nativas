@@ -7,7 +7,10 @@ source("agregacao.R")
 source("inv_summary.R")
 
 inv = read.csv("cauaxi 2012.csv")
-head(estrutura(inv, "scientific.name", "DBH", "transect", 1000, "canopy", "light"))
+#inv2 = read.csv("cauaxi_parc10000m2.csv")
+head(estrutura(inv, "scientific.name", "DBH", "transect", 1000)) # horizontal
+head(estrutura(inv, "scientific.name", "DBH", "transect", 1000, "canopy")) # vertical
+head(estrutura(inv, "scientific.name", "DBH", "transect", 1000, "canopy", "light")) # vertical + interna
 diversidade(inv, "scientific.name", indice = "H")
 diversidade(inv, "scientific.name", indice = "S")
 diversidade(inv, "scientific.name", indice = "Hmax")
@@ -15,7 +18,7 @@ diversidade(inv, "scientific.name", indice = "J")
 diversidade(inv, "scientific.name")
 p.similaridade(inv[inv$transect == "T01","scientific.name"], inv[inv$transect == "T02","scientific.name"])
 m.similaridade(inv, "scientific.name", "transect")
-bdq.meyer(inv, "transect", "DBH", 1000)[1]
+bdq.meyer(inv, "transect", "DBH", 1000)[[1]]
 agregacao(inv, "scientific.name", "transect")
 
 inv = read.csv("ducke.csv")
@@ -28,6 +31,8 @@ diversidade(inv, "scientific_name")
 m.similaridade(inv, "scientific_name", "transect")
 bdq.meyer(inv, "transect", "DBH_11", 1000)[1]
 agregacao(inv, "scientific_name", "transect")
+
+# Totalizacao de Parcelas ####
 
 # calculo do volume e add da coluna de area (em m²)
 library(dplyr)
@@ -95,3 +100,5 @@ inv_summary(inv2, "DBH_11", "Htot_11", "VOL", "transect.area", groups = c("trans
 
 # Argumento de area pode ser numerico
 inv_summary(inv2, "DBH_11", "Htot_11", "VOL", 1000, groups = c("transect", "scientific.name") )
+
+
