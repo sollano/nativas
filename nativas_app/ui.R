@@ -334,32 +334,12 @@ shinyUI(
                                    
                                    sidebarPanel(
                                      
-                                     h3("Totalização de Parcelas"),
-                                     
-                                     uiOutput("selec_DAPnew"),
-                                     
-                                     uiOutput("selec_HTnew"), 
-                                     
-                                     uiOutput("selec_VCCnew"), 
-                                     
-                                     uiOutput("selec_area_parcelanew"), 
-                                     
-                                     uiOutput("selec_gruposnew"), 
-                                     
-                                     h3("Variaveis opcionais:"),
-                                     
-                                     uiOutput("selec_area_totalnew"), 
-                                     
-                                     uiOutput("selec_idadenew"), 
-                                     
-                                     uiOutput("selec_VSCnew"), 
-                                     
-                                     uiOutput("selec_HDnew"),
+                                     uiOutput("tot_parc_ui"),
                                      
                                      actionButton( # botao que o usuario clica, e gera uma acao no server
                                        "Loadnew", # Id
                                        "Rodar")
-                                     
+
                                    ), # sidebar panel
                                    
                                    mainPanel(
@@ -382,54 +362,8 @@ shinyUI(
                                    
                                    sidebarPanel(
 
-                                     h3("Amostragem Casual Simples"),
 
-                                     uiOutput("selec_area_totalacs"),
-                                     
-                                     uiOutput("selec_area_parcelaacs"),
-                                     
-                                     uiOutput("selec_VCCacs"),
-                                     
-                                     h4("Variaveis opcionais:"),
-                                     
-                                     uiOutput("selec_idadeacs"),
-                                     
-                                     uiOutput("selec_gruposacs"),
-                                     
-                                     sliderInput("cdacs", 
-                                                 label = "Selecione o nº de casas decimais:", 
-                                                 min = 0, 
-                                                 max = 10, 
-                                                 value = 4,
-                                                 step = 1),
-                                     
-                                     sliderInput("alphaacs", 
-                                                 label = "Selecione o nível de significância:", 
-                                                 min = 0.01, 
-                                                 max = 0.10, 
-                                                 value = 0.05,
-                                                 step = 0.01),
-                                     
-                                     sliderInput("erroacs", 
-                                                 label = "Selecione o erro admitido (%):", 
-                                                 min = 1, 
-                                                 max = 20, 
-                                                 value = 10,
-                                                 step = 1),
-                                     
-                                     radioButtons(
-                                       inputId='popacs', # Id
-                                       label='Considerar a população infinita ou finita?', # nome que sera mostrado na UI
-                                       choices=c(Infinita="inf", Finita="fin"), # opcoes e seus nomes
-                                       selected="inf"
-                                     ),
-
-                                     radioButtons( # esta da ao usuario opcoes para clicar. Apenas uma e selecionada
-                                       inputId="tidyacs",  #Id
-                                       label='Selecione o arranjo da tabela:', # nome que sera mostrado na UI
-                                       choices=c(Vertical = T, Horizontal = F), # opcoes e seus nomes
-                                       selected=T), # valor que sera selecionado inicialmente
-                                     
+                                     uiOutput("acs_ui"),
                                      
                                      actionButton( # botao que o usuario clica, e gera uma acao no server
                                        "Loadacs", # Id
@@ -453,54 +387,8 @@ shinyUI(
                                  sidebarLayout(
                                    
                                    sidebarPanel(
-                                     
-                                     h3("Amostragem Casual Estratificada"),
-                                     
-                                     uiOutput("selec_area_totalace"),
-                                     
-                                     uiOutput("selec_area_parcelaace"),
-                                     
-                                     uiOutput("selec_VCCace"),
-                                     
-                                     uiOutput("selec_gruposace"), # limita o numero de variaveis que o usuario pode selecionar
-                                     
-                                     h4("Variaveis opcionais:"),
-                                     
-                                     uiOutput("selec_idadeace"),
-                                     
-                                     sliderInput("cdace", 
-                                                 label = "Selecione o nº de casas decimais:", 
-                                                 min = 0, 
-                                                 max = 10, 
-                                                 value = 4,
-                                                 step = 1),
-                                     
-                                     sliderInput("alphaace", 
-                                                 label = "Selecione o nível de significância:", 
-                                                 min = 0.01, 
-                                                 max = 0.10, 
-                                                 value = 0.05,
-                                                 step = 0.01),
-                                     
-                                     sliderInput("erroace", 
-                                                 label = "Selecione o erro admitido (%):", 
-                                                 min = 1, 
-                                                 max = 20, 
-                                                 value = 10,
-                                                 step = 1),
-                                     
-                                     radioButtons(
-                                       inputId='popace', # Id
-                                       label='Considerar a população infinita ou finita?', # nome que sera mostrado na UI
-                                       choices=c(Infinita="inf", Finita="fin"), # opcoes e seus nomes
-                                       selected="inf"
-                                     ),
 
-                                     radioButtons( # esta da ao usuario opcoes para clicar. Apenas uma e selecionada
-                                       inputId="tidyace",  #Id
-                                       label='Selecione o arranjo da tabela:', # nome que sera mostrado na UI
-                                       choices=c(Vertical = T, Horizontal = F), # opcoes e seus nomes
-                                       selected=T), # valor que sera selecionado inicialmente
+                                     uiOutput("ace_ui"),
                                      
                                      actionButton( # botao que o usuario clica, e gera uma acao no server
                                        "Loadace", # Id
@@ -533,48 +421,7 @@ shinyUI(
                                    
                                    sidebarPanel(
                                      
-                                     h3("Amostragem Sistematica"),
-                                     
-                                     uiOutput("selec_area_totalas"),
-                                     
-                                     uiOutput("selec_area_parcelaas"),
-                                     
-                                     uiOutput("selec_VCCas"),
-                                     
-                                     h4("Variaveis opcionais:"),
-                                     
-                                     uiOutput("selec_idadeas"),
-                                     
-                                     uiOutput("selec_gruposas"),
-                                     
-                                     sliderInput("cdas", 
-                                                 label = "Selecione o nº de casas decimais:", 
-                                                 min = 0, 
-                                                 max = 10, 
-                                                 value = 4,
-                                                 step = 1),
-                                     
-                                     sliderInput("alphaas", 
-                                                 label = "Selecione o nível de significância:", 
-                                                 min = 0.01, 
-                                                 max = 0.10, 
-                                                 value = 0.05,
-                                                 step = 0.01),
-                                     
-                                     sliderInput("erroas", 
-                                                 label = "Selecione o erro admitido (%):", 
-                                                 min = 1, 
-                                                 max = 20, 
-                                                 value = 10,
-                                                 step = 1),
-                                     
-                                     
-                                     radioButtons( # esta da ao usuario opcoes para clicar. Apenas uma e selecionada
-                                       inputId="tidyas",  #Id
-                                       label='Selecione o arranjo da tabela:', # nome que sera mostrado na UI
-                                       choices=c(Vertical = T, Horizontal = F), # opcoes e seus nomes
-                                       selected=T), # valor que sera selecionado inicialmente
-                                     
+                                     uiOutput("as_ui"),
                                      
                                      actionButton( # botao que o usuario clica, e gera uma acao no server
                                        "Loadas", # Id
