@@ -41,7 +41,7 @@ shinyUI(
                                         label = "Excel (.xls ou .xslx) ?",
                                         value = F),
                           
-                          div("Recomendados o uso do formato .csv", style = "color:blue"),
+                          div("Recomendamos o uso do formato .csv", style = "color:blue"),
                           
                           radioButtons("df", 
                                       "Tipo da base de dados:", 
@@ -146,7 +146,9 @@ shinyUI(
                                    mainPanel(
                                      tabsetPanel(
                                        tabPanel("Jaccard", DT::dataTableOutput("msim1") ),
-                                       tabPanel("Sorensen", DT::dataTableOutput("msim2") ) )
+                                       tabPanel("Dendrograma Jaccard", plotOutput("msim1_graph")),
+                                       tabPanel("Sorensen", DT::dataTableOutput("msim2") ),
+                                       tabPanel("Dendrograma Sorensen", plotOutput("msim2_graph") )  )
                                    ) # main Panel
                                    
                                  )# Sidebar layout
@@ -186,7 +188,7 @@ shinyUI(
                                      
                                    ), # sidebar Panel
                                    mainPanel(
-                                     DT::dataTableOutput("psim") 
+                                     DT::dataTableOutput("psim", "70%") 
                                    ) # main Panel
                                    
                                  )# Sidebar layout
@@ -302,21 +304,21 @@ shinyUI(
                        uiOutput("selec_area.parcelaBDq"),
                        
                        sliderInput("intervalo.classeBDq", 
-                                   label = "Intervalo de classe:", 
+                                   label = "Selecione um intervalo de classe:", 
                                    min = 0, 
                                    max = 10, 
                                    value = 5,
                                    step = 1),
                        
                        sliderInput("min.dapBDq", 
-                                   label = "DAP mínimo::", 
+                                   label = "Selecione o DAP mínimo:", 
                                    min = 0, 
                                    max = 10, 
                                    value = 5,
                                    step = 1),
                        
                        sliderInput("i.licourtBDq", 
-                                   label = "Quociente de Licourt:", 
+                                   label = "Selecione um valor de quociente de Licourt:", 
                                    min = 0, 
                                    max = 5, 
                                    value = 1.3,
@@ -330,7 +332,8 @@ shinyUI(
                      mainPanel(
                        tabsetPanel(
                          tabPanel("BDq", DT::dataTableOutput("BDq1") ),
-                         tabPanel("Coeficientes", DT::dataTableOutput("BDq3") )
+                         tabPanel("Gráfico", plotOutput( "BDqgraph" ) ),
+                         tabPanel("Coeficientes", DT::dataTableOutput("BDq3", "70%") )
                        )
                        
                      ) # main Panel

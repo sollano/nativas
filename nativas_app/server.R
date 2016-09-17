@@ -1,10 +1,13 @@
 
 library(shiny)
 library(DT)
-library(plyr)
+#library(plyr)
 library(tidyr)
 library(dplyr)
 library(lazyeval)
+library(ggplot2)
+library(ggdendro)
+library(ggthemes)
 library(xlsx)
 library(xlsxjars)
 library(markdown)
@@ -284,6 +287,7 @@ bdq.meyer = function(data, col.parcelas, col.dap, area.parcela, intervalo.classe
   DD$NumIndv = freq[,2]
   DD$IndvHectare = round(DD$NumIndv / ((AREA.PLOT/10000) * nplots), 1)
   DD = DD[DD$CentroClasse >= DBH.MIN,]
+  DD = DD[DD$IndvHectare > 0,]
   rm(freq)
   
   # Meyer
@@ -563,7 +567,6 @@ inv_summary <- function(df,DAP, HT, VCC, area_parcela, groups, area_total,idade,
     select_if(Negate(anyNA)) %>%  # remove variaveis que nao foram informadas (argumentos opicionais nao inseridos viram NA)
     as.data.frame
 }
-
 
 acs <- function(df, area_total, area_parcela, VCC, idade, grupos, alpha = 0.05, Erro = 10, casas_decimais=4, pop="inf",tidy=T){
   
@@ -984,7 +987,6 @@ as_diffs <- function(df, area_total, area_parcela, VCC, idade, grupos, alpha = 0
   
 }
 
-
 # vectors for names ####
 
 especies_names <- c("nome.cient","scientific.name","Scientific.Name","SCIENTIFIC.NAME" ,"scientific_name", "Scientific_Name","SCIENTIFIC_NAME","nome.cientifico", "Nome.Cientifico","NOME.CIENTIFICO","nome_cientifico", "Nome_Cientifico","NOME_CIENTIFICO")
@@ -1045,9 +1047,401 @@ shinyServer(function(input, output, session) {
     
   })
   
+  # Índices de diversidade ####
+  
+  # funcao diversidade
+  tabdiversidade <- reactive({
+    
+    validate(need(input$df == "Dados em nivel de arvore", "Base de dados incompativel" )  )
+    
+    if(input$Loaddiv){
+      
+      dados <- rawData()
+      
+      x <- diversidade(data             = dados, 
+                       col.especies     = input$col.especiesdiv,
+                       rotulo.NI        = input$rotutuloNIdiv  ) %>% 
+        gather("Índice", "Resultado") # transpor tabela
+      
+      x 
+    }
+    
+  })
+  
+  # UI
+  output$selec_especiesdiv <- renderUI({
+    
+    data <- rawData()
+    
+    selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
+      "col.especiesdiv", # Id
+      "Selecione a coluna de espécies:", # nome que sera mostrado na UI
+      choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
+      selected = especies_names,     
+      options = list(
+        placeholder = 'selecione uma coluna abaixo'#,
+        #onInitialize = I('function() { this.setValue(""); }')
+      ) # options    
+    )
+    
+  })
+  
+  output$selec_rotuloNIdiv <- renderUI({
+    
+    dados <- rawData()
+    
+    switch(input$CBdiv,
+           "Manualmente" = textInput("rotutuloNIdiv", 
+                                     label = "Rotular:", 
+                                     value = "NI"),
+           
+           "lista de especies" = selectizeInput("rotutuloNIdiv",
+                                                label = "Rotular:",
+                                                choices = levels(as.factor(dados[,input$col.especiesdiv])),
+                                                options = list(
+                                                  placeholder = 'Selecione uma espécie abaixo',
+                                                  onInitialize = I('function() { this.setValue(""); }')
+                                                ) # options    
+           )# selectize
+    )
+    
+    
+  })
+  
+  # tabela
+  output$div <- renderDataTable({
+    
+    if(input$Loaddiv)
+    {
+      divdt <- tabdiversidade() 
+      
+      datatable( divdt,
+                 options = list(searching = FALSE,
+                                paging=FALSE )  ) 
+    }
+    
+  }) 
+  
+  # Matriz Similaridade ####
+  
+  # funcao m similaridade
+  tabmsimilaridade1 <- reactive({
+    
+    if(input$Loadmsim){
+      
+      validate(need(input$df == "Dados em nivel de arvore", "Base de dados incompativel" )  )
+      
+      dados <- rawData()
+      
+      x <- m.similaridade(data             = dados, 
+                          col.especies     = input$col.especiesmsim,
+                          col.comparison   = input$col.parcelasmsim,
+                          rotulo.NI        = input$rotutuloNImsim  )
+      
+      x <- as.data.frame(x[[1]])
+      names(x) <- 1:length(x)
+      x
+    }
+    
+  })
+  tabmsimilaridade2 <- reactive({
+    
+    validate(need(input$df == "Dados em nivel de arvore", "Base de dados incompativel" )  )
+    
+    if(input$Loadmsim){
+      
+      dados <- rawData()
+      
+      x <- m.similaridade(data             = dados, 
+                          col.especies     = input$col.especiesmsim,
+                          col.comparison   = input$col.parcelasmsim,
+                          rotulo.NI        = input$rotutuloNImsim  )
+      
+      x <- as.data.frame(x[[2]])
+      names(x) <- 1:length(x)
+      x
+    }
+    
+  })
+  
+  # UI
+  
+  output$selec_especiesmsim <- renderUI({
+    
+    data <- rawData()
+    
+    selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
+      "col.especiesmsim", # Id
+      "Selecione a coluna de espécies:", # nome que sera mostrado na UI
+      choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
+      selected = especies_names,     
+      options = list(
+        placeholder = 'selecione uma coluna abaixo'#,
+        #onInitialize = I('function() { this.setValue(""); }')
+      ) # options    
+    )
+    
+  })
+  
+  output$selec_parcelasmsim <- renderUI({
+    
+    data <- rawData()
+    
+    selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
+      "col.parcelasmsim", # Id
+      "Selecione a coluna da parcela:", # nome que sera mostrado na UI
+      choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
+      selected = parcelas_names,     
+      options = list(
+        placeholder = 'selecione uma coluna abaixo'#,
+        #onInitialize = I('function() { this.setValue(""); }')
+      ) # options    
+    )
+    
+  })
+  
+  output$selec_rotuloNImsim <- renderUI({
+    
+    dados <- rawData()
+    
+    switch(input$CBmsim,
+           "Manualmente" = textInput("rotutuloNImsim", 
+                                     label = "Rotular:", 
+                                     value = "NI"),
+           
+           "lista de especies" = selectizeInput("rotutuloNImsim",
+                                                label = "Rotular:",
+                                                choices = levels(
+                                                  as.factor(
+                                                    dados[,input$col.especiesmsim])),
+                                                options = list(
+                                                  placeholder = 'Selecione uma espécie abaixo',
+                                                  onInitialize = I('function() { this.setValue(""); }')
+                                                ) # options    
+           )# selectize
+    )
+    
+    
+  })
+  
+  
+  # tabela
+  output$msim1 <- renderDataTable({
+    
+    if(input$Loadmsim)
+    {
+      msimdt1 <- tabmsimilaridade1() 
+      
+      datatable( msimdt1,
+                 options = list(searching = FALSE,
+                                paging=FALSE )  ) 
+    }
+    
+  }) 
+  output$msim2 <- renderDataTable({
+    
+    if(input$Loadmsim)
+    {
+      msimdt2 <- tabmsimilaridade2() 
+      
+      datatable( msimdt2,
+                 options = list(searching = FALSE,
+                                paging=FALSE )  ) 
+    }
+    
+  }) 
+  
+  # graficos 
+  output$msim1_graph <- renderPlot({
+    
+    if(input$Loadmsim)
+    {
+      dados <- rawData()
+      ms <- as.data.frame(tabmsimilaridade1() ) 
+      
+      names(ms) <- levels( as.factor( dados[,input$col.parcelasmsim] ) )
+      
+      ms_hclust <- hclust(as.dist(ms) ) #?
+      
+      ggdendrogram(ms_hclust)
+      
+      }
+    
+    
+    
+  })
+  output$msim2_graph <- renderPlot({
+    
+    if(input$Loadmsim)
+    {
+      dados <- rawData()
+      ms <- as.data.frame(tabmsimilaridade2() ) 
+      
+      names(ms) <- levels( as.factor( dados[,input$col.parcelasmsim] ) )
+      
+      ms_hclust <- hclust(as.dist(ms) ) #?
+      
+      ggdendrogram(ms_hclust)
+      
+    }
+    
+    
+    
+  })
+  
+  
+  # Pareado Similaridade ####
+  # funcao p similaridade
+  tabpsimilaridade <- reactive({
+    
+    validate(need(input$df == "Dados em nivel de arvore", "Base de dados incompativel" )  )
+    
+    if(input$Loadpsim){
+      
+      dados <- rawData()
+      
+      #inv %>% 
+      #filter_(.dots = interp(~ transect == "T01", transect = as.name("transect") ) ) %>% 
+      #select_("scientific.name")
+      
+      x <- dados %>% 
+        filter_(.dots = interp(~ transect == input$psimselec_parc1, transect = as.name(input$col.parcelaspsim) ) ) %>% 
+        select_(input$col.especiespsim)
+      
+      y <- dados %>% 
+        filter_(.dots = interp(~ transect == input$psimselec_parc2, transect = as.name(input$col.parcelaspsim) ) ) %>% 
+        select_(input$col.especiespsim)
+      
+      x <- p.similaridade( 
+        x         = x[,1],
+        y         = y[,1],
+        rotuloNI = input$rotutuloNIpsim  )
+      
+      x <- data.frame( "Índices" = c("Jaccard", "Sorensen")  ,
+                       "Resultado" = c( x[1], x[2] )  )
+      x
+      
+    }
+    
+  })
+  
+  # UI
+  
+  output$selec_especiespsim <- renderUI({
+    
+    data <- rawData()
+    
+    selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
+      "col.especiespsim", # Id
+      "Selecione a coluna de espécies:", # nome que sera mostrado na UI
+      choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
+      selected = especies_names,     
+      options = list(
+        placeholder = 'selecione uma coluna abaixo'#,
+        #onInitialize = I('function() { this.setValue(""); }')
+      ) # options    
+    )
+    
+  })
+  
+  output$selec_parcelaspsim <- renderUI({
+    
+    data <- rawData()
+    
+    selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
+      "col.parcelaspsim", # Id
+      "Selecione a coluna da parcela:", # nome que sera mostrado na UI
+      choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
+      selected = parcelas_names,     
+      options = list(
+        placeholder = 'selecione uma coluna abaixo'#,
+        #onInitialize = I('function() { this.setValue(""); }')
+      ) # options    
+    )
+    
+  })
+  
+  output$selec_psimselec_parc1 <- renderUI({
+    
+    dados <- rawData()
+    
+    parcelas <- levels(
+      as.factor(
+        dados[,input$col.parcelaspsim]))
+    
+    selectizeInput("psimselec_parc1",
+                   label = "Selecione a Parcela 1:",
+                   choices = parcelas,
+                   options = list(
+                     placeholder = 'Selecione uma espécie abaixo',
+                     onInitialize = I('function() { this.setValue(""); }')
+                   ) # options    
+    )
+    
+  })
+  
+  output$selec_psimselec_parc2 <- renderUI({
+    
+    dados <- rawData()
+    
+    parcelas <- levels(
+      as.factor(
+        dados[,input$col.parcelaspsim]))
+    
+    selectizeInput("psimselec_parc2",
+                   label = "Selecione a Parcela 2:",
+                   choices = parcelas,
+                   options = list(
+                     placeholder = 'Selecione uma espécie abaixo',
+                     onInitialize = I('function() { this.setValue(""); }')
+                   ) # options    
+    )
+    
+  })
+  
+  output$selec_rotuloNIpsim <- renderUI({
+    
+    dados <- rawData()
+    
+    switch(input$CBpsim,
+           "Manualmente" = textInput("rotutuloNIpsim", 
+                                     label = "Rotular:", 
+                                     value = "NI"),
+           
+           "lista de especies" = selectizeInput("rotutuloNIpsim",
+                                                label = "Rotular:",
+                                                choices = levels(
+                                                  as.factor(
+                                                    dados[,input$col.especiespsim])),
+                                                options = list(
+                                                  placeholder = 'Selecione uma espécie abaixo',
+                                                  onInitialize = I('function() { this.setValue(""); }')
+                                                ) # options    
+           )# selectize
+    )
+    
+    
+  })
+  
+  # tabela
+  output$psim <- renderDataTable({
+    
+    if(input$Loadpsim)
+    {
+      psimdt <- tabpsimilaridade() 
+      
+      datatable( psimdt,
+                 options = list(searching = FALSE,
+                                paging=FALSE )  ) 
+    }
+    
+  }) 
+ 
   # Índices de agregacao ####
   
   tabagregate <- reactive({
+    
+    validate(need(input$df == "Dados em nivel de arvore", "Base de dados incompativel" )  )
     
     if(input$Loadagreg){
       
@@ -1137,6 +1531,8 @@ shinyServer(function(input, output, session) {
   
   # funcao estrutura
   tabestrutura <- reactive({
+    
+    validate(need(input$df == "Dados em nivel de arvore", "Base de dados incompativel" )  )
     
     if(input$Loadestr){
       
@@ -1281,7 +1677,6 @@ shinyServer(function(input, output, session) {
     
   })
   
-  
   # tabela
   output$estr <- renderDataTable({
     
@@ -1297,85 +1692,12 @@ shinyServer(function(input, output, session) {
   }) 
   
   
-  # Diversidade ####
-  
-  # funcao diversidade
-  tabdiversidade <- reactive({
-    
-    if(input$Loaddiv){
-      
-      dados <- rawData()
-      
-      x <- diversidade(data             = dados, 
-                       col.especies     = input$col.especiesdiv,
-                       rotulo.NI        = input$rotutuloNIdiv  ) %>% 
-        gather("Índice", "Resultado") # transpor tabela
-      
-      x 
-    }
-    
-  })
-  
-  # UI
-  output$selec_especiesdiv <- renderUI({
-    
-    data <- rawData()
-    
-    selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
-      "col.especiesdiv", # Id
-      "Selecione a coluna de espécies:", # nome que sera mostrado na UI
-      choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
-      selected = especies_names,     
-      options = list(
-        placeholder = 'selecione uma coluna abaixo'#,
-        #onInitialize = I('function() { this.setValue(""); }')
-      ) # options    
-    )
-    
-  })
-  
-  output$selec_rotuloNIdiv <- renderUI({
-    
-    dados <- rawData()
-    
-    switch(input$CBdiv,
-           "Manualmente" = textInput("rotutuloNIdiv", 
-                                     label = "Rotular:", 
-                                     value = "NI"),
-           
-           "lista de especies" = selectizeInput("rotutuloNIdiv",
-                                                label = "Rotular:",
-                                                choices = levels(as.factor(dados[,input$col.especiesdiv])),
-                                                options = list(
-                                                  placeholder = 'Selecione uma espécie abaixo',
-                                                  onInitialize = I('function() { this.setValue(""); }')
-                                                ) # options    
-           )# selectize
-    )
-    
-    
-  })
-  
-  
-  # tabela
-  output$div <- renderDataTable({
-    
-    if(input$Loaddiv)
-    {
-      divdt <- tabdiversidade() 
-      
-      datatable( divdt,
-                 options = list(searching = FALSE,
-                                paging=FALSE )  ) 
-    }
-    
-  }) 
-  
-  
   # BDq Meyer ####
   
   # funcao BDq Meyer
   tabBDq1 <- reactive({
+    
+    validate(need(input$df == "Dados em nivel de arvore", "Base de dados incompativel" )  )
     
     if(input$LoadBDq){
       
@@ -1395,6 +1717,8 @@ shinyServer(function(input, output, session) {
   })
   tabBDq3 <- reactive({
     
+    validate(need(input$df == "Dados em nivel de arvore", "Base de dados incompativel" )  )
+    
     if(input$LoadBDq){
       
       dados <- rawData()
@@ -1407,7 +1731,8 @@ shinyServer(function(input, output, session) {
                      min.dap          = input$min.dapBDq,
                      i.licourt        = input$i.licourtBDq  )
       
-      x <- data.frame(b0 = x[[3]][1], b1 = x[[3]][2])
+      x <-data.frame( "Coeficientes" = c("b0", "b1")  ,
+                      "Valor"        = c( x[[3]][1], x[[3]][2] )  )
       x
     }
     
@@ -1474,8 +1799,8 @@ shinyServer(function(input, output, session) {
       BDqdt <- tabBDq1()
       
       datatable( as.data.frame(BDqdt),
-                 options = list(searching = FALSE,
-                                paging=FALSE )  ) 
+                 options = list(searching = T,
+                                paging=T )  ) 
     }
     
   }) 
@@ -1492,277 +1817,34 @@ shinyServer(function(input, output, session) {
     
   }) 
 
-  # Matriz Similaridade ####
+  # grafico
   
-  # funcao m similaridade
-  tabmsimilaridade1 <- reactive({
-    
-    if(input$Loadmsim){
-      
-      dados <- rawData()
-      
-      x <- m.similaridade(data             = dados, 
-                          col.especies     = input$col.especiesmsim,
-                          col.comparison   = input$col.parcelasmsim,
-                          rotulo.NI        = input$rotutuloNImsim  )
-      
-      x <- as.data.frame(x[[1]])
-      names(x) <- 1:length(x)
-      x
-    }
-    
-  })
-  tabmsimilaridade2 <- reactive({
-    
-    if(input$Loadmsim){
-      
-      dados <- rawData()
-      
-      x <- m.similaridade(data             = dados, 
-                          col.especies     = input$col.especiesmsim,
-                          col.comparison   = input$col.parcelasmsim,
-                          rotulo.NI        = input$rotutuloNImsim  )
-      
-      x <- as.data.frame(x[[2]])
-      names(x) <- 1:length(x)
-      x
-    }
-    
-  })
-  
-  # UI
-  
-  output$selec_especiesmsim <- renderUI({
-    
-    data <- rawData()
-    
-    selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
-      "col.especiesmsim", # Id
-      "Selecione a coluna de espécies:", # nome que sera mostrado na UI
-      choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
-      selected = especies_names,     
-      options = list(
-        placeholder = 'selecione uma coluna abaixo'#,
-        #onInitialize = I('function() { this.setValue(""); }')
-      ) # options    
-    )
-    
-  })
-  
-  output$selec_parcelasmsim <- renderUI({
-    
-    data <- rawData()
-    
-    selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
-      "col.parcelasmsim", # Id
-      "Selecione a coluna da parcela:", # nome que sera mostrado na UI
-      choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
-      selected = parcelas_names,     
-      options = list(
-        placeholder = 'selecione uma coluna abaixo'#,
-        #onInitialize = I('function() { this.setValue(""); }')
-      ) # options    
-    )
-    
-  })
-  
-  output$selec_rotuloNImsim <- renderUI({
-    
-    dados <- rawData()
-    
-    switch(input$CBmsim,
-           "Manualmente" = textInput("rotutuloNImsim", 
-                                     label = "Rotular:", 
-                                     value = "NI"),
-           
-           "lista de especies" = selectizeInput("rotutuloNImsim",
-                                                label = "Rotular:",
-                                                choices = levels(
-                                                  as.factor(
-                                                    dados[,input$col.especiesmsim])),
-                                                options = list(
-                                                  placeholder = 'Selecione uma espécie abaixo',
-                                                  onInitialize = I('function() { this.setValue(""); }')
-                                                ) # options    
-           )# selectize
-    )
-    
-    
-  })
-  
-  
-  # tabela
-  output$msim1 <- renderDataTable({
-    
-    if(input$Loadmsim)
-    {
-      msimdt1 <- tabmsimilaridade1() 
 
-      datatable( msimdt1,
-                 options = list(searching = FALSE,
-                                paging=FALSE )  ) 
-    }
+  output$BDqgraph <- renderPlot({
     
-  }) 
-  output$msim2 <- renderDataTable({
+    if(input$LoadBDq){
     
-    if(input$Loadmsim)
-    {
-      msimdt2 <- tabmsimilaridade2() 
-
-      datatable( msimdt2,
-                 options = list(searching = FALSE,
-                                paging=FALSE )  ) 
-    }
+    data <- tabBDq1()
     
-  }) 
- 
-  
-  # Pareado Similaridade ####
-  # funcao p similaridade
-  tabpsimilaridade <- reactive({
+    graph_bdq <- data %>% 
+      select("x"                = CentroClasse, 
+             "Distribuição observada"  = IndvHectare , 
+             "Distribuição balanceada" = MeyerBalan  ) %>% 
+      gather(class, y, -x, factor_key = T) %>% 
+      arrange(x) %>% 
+      mutate(x = as.factor(x) )
     
-    if(input$Loadpsim){
-      
-      dados <- rawData()
-      
-      #inv %>% 
-        #filter_(.dots = interp(~ transect == "T01", transect = as.name("transect") ) ) %>% 
-        #select_("scientific.name")
-      
-      x <- dados %>% 
-        filter_(.dots = interp(~ transect == input$psimselec_parc1, transect = as.name(input$col.parcelaspsim) ) ) %>% 
-        select_(input$col.especiespsim)
-      
-      y <- dados %>% 
-        filter_(.dots = interp(~ transect == input$psimselec_parc2, transect = as.name(input$col.parcelaspsim) ) ) %>% 
-        select_(input$col.especiespsim)
-      
-      x <- p.similaridade( 
-                          x         = x[,1],
-                          y         = y[,1],
-                          rotuloNI = input$rotutuloNIpsim  )
-      
-      x <- data.frame("Jaccard" = x[1], "Sorensen" = x[2])
-      x
-
+    x <-  ggplot(graph_bdq, aes(x = x, y = y) ) + 
+      geom_bar(aes(fill = class), stat = "identity",position = "dodge") +
+      labs(x = "Classe de diâmetro (cm)", y = "Número de indivíduos (ha)", fill = NULL) + 
+      scale_fill_manual(values =c("firebrick2", "cyan3") ) +
+      theme_hc(base_size = 14) 
+    #theme_igray(base_size = 14)
+    
+    x
     }
     
   })
-  
-  # UI
-  
-  output$selec_especiespsim <- renderUI({
-    
-    data <- rawData()
-    
-    selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
-      "col.especiespsim", # Id
-      "Selecione a coluna de espécies:", # nome que sera mostrado na UI
-      choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
-      selected = especies_names,     
-      options = list(
-        placeholder = 'selecione uma coluna abaixo'#,
-        #onInitialize = I('function() { this.setValue(""); }')
-      ) # options    
-    )
-    
-  })
-  
-  output$selec_parcelaspsim <- renderUI({
-    
-    data <- rawData()
-    
-    selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
-      "col.parcelaspsim", # Id
-      "Selecione a coluna da parcela:", # nome que sera mostrado na UI
-      choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
-      selected = parcelas_names,     
-      options = list(
-        placeholder = 'selecione uma coluna abaixo'#,
-        #onInitialize = I('function() { this.setValue(""); }')
-      ) # options    
-    )
-    
-  })
-  
-  output$selec_psimselec_parc1 <- renderUI({
-    
-    dados <- rawData()
-    
-    parcelas <- levels(
-      as.factor(
-        dados[,input$col.parcelaspsim]))
-    
-    selectizeInput("psimselec_parc1",
-                   label = "Selecione a Parcela 1:",
-                   choices = parcelas,
-                   options = list(
-                     placeholder = 'Selecione uma espécie abaixo',
-                     onInitialize = I('function() { this.setValue(""); }')
-                   ) # options    
-    )
-    
-  })
-  
-  output$selec_psimselec_parc2 <- renderUI({
-    
-    dados <- rawData()
-    
-    parcelas <- levels(
-      as.factor(
-        dados[,input$col.parcelaspsim]))
-    
-    selectizeInput("psimselec_parc2",
-                   label = "Selecione a Parcela 2:",
-                   choices = parcelas,
-                   options = list(
-                     placeholder = 'Selecione uma espécie abaixo',
-                     onInitialize = I('function() { this.setValue(""); }')
-                   ) # options    
-    )
-    
-  })
-  
-  output$selec_rotuloNIpsim <- renderUI({
-    
-    dados <- rawData()
-    
-    switch(input$CBpsim,
-           "Manualmente" = textInput("rotutuloNIpsim", 
-                                     label = "Rotular:", 
-                                     value = "NI"),
-           
-           "lista de especies" = selectizeInput("rotutuloNIpsim",
-                                                label = "Rotular:",
-                                                choices = levels(
-                                                  as.factor(
-                                                    dados[,input$col.especiespsim])),
-                                                options = list(
-                                                  placeholder = 'Selecione uma espécie abaixo',
-                                                  onInitialize = I('function() { this.setValue(""); }')
-                                                ) # options    
-           )# selectize
-    )
-    
-    
-  })
-  
-  # tabela
-  output$psim <- renderDataTable({
-    
-    if(input$Loadpsim)
-    {
-      psimdt <- tabpsimilaridade() 
-
-            datatable( psimdt,
-                 options = list(searching = FALSE,
-                                paging=FALSE )  ) 
-    }
-    
-  }) 
-  
-  
   
   # Inventario ####
   
@@ -1782,6 +1864,8 @@ shinyServer(function(input, output, session) {
   
   # dados / funcao inv_summary
   newData <- reactive({
+    
+    validate(need(input$df == "Dados em nivel de arvore", "Base de dados incompativel" )  )
     
     if(input$Loadnew){    
       
@@ -1807,6 +1891,7 @@ shinyServer(function(input, output, session) {
   # UI
   output$selec_DAPnew <- renderUI({
     
+  
     data <- rawData()
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
