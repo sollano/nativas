@@ -12,6 +12,9 @@ library(xlsx)
 library(xlsxjars)
 library(markdown)
 
+ex <- read.csv("examples/cauaxi_parc10000m2.csv")
+
+
 # Funcoes Nativas ####
 
 agregacao = function(data, col.especies, col.parcelas, rotulo.NI = "NI"){
@@ -1012,8 +1015,61 @@ shinyServer(function(input, output, session) {
   
   
   # Importar os dados ####
+
   
-  rawData <- reactive({ # Criamos uma nova funcao reactive. este sera o objeto filtrado, utilizado nos calculos
+  output$upload <- renderUI({
+    
+    validate(need(input$df_select == "Fazer o upload", "" )  )
+
+    list(    
+      
+      fileInput( # input de arquivos
+      inputId = "file1", # Id
+      
+      label = "Selecione o arquivo: (.csv, .txt ou .xlsx)", # nome que sera mostrado na UI
+      
+      accept=c('text/csv/xlsx','.csv', ".txt", ".xlsx")),
+      
+      checkboxInput(inputId = "excel",
+                    label = "Excel (.xls ou .xslx) ?",
+                    value = F),
+      
+      div("Recomendamos o uso do formato .csv", style = "color:blue"),
+      
+      radioButtons("df", 
+                   "Tipo da base de dados:", 
+                   choices = c("Dados em nivel de arvore",
+                               "Dados em nivel de parcela"),
+                   selected = "Dados em nivel de arvore"),
+      
+      
+      radioButtons( # esta da ao usuario opcoes para clicar. Apenas uma e selecionada
+        inputId='sep',  #Id
+        label='Separador:', # nome que sera mostrado na UI
+        choices=c(Virgula=',', "Ponto e Virgula"=';', Tab='\t'), # opcoes e seus nomes
+        selected=','), # valor que sera selecionado inicialmente
+      
+      radioButtons( # esta da ao usuario opcoes para clicar. Apenas uma e selecionada
+        inputId='dec', # Id
+        label='Decimal:', # nome que sera mostrado na UI
+        choices=c(Ponto=".", Virgula=","), # opcoes e seus nomes
+        selected="."), # valor que sera selecionado inicialmente
+      
+      
+      
+      actionButton( # botao que o usuario clica, e gera uma acao no server
+        "Load", # Id
+        "Carregue o arquivo")
+      
+      
+      
+      
+    )
+    
+    
+  })
+  
+  upData <- reactive({ # Criamos uma nova funcao reactive. este sera o objeto filtrado, utilizado nos calculos
     
     if(input$Load==0){return()} # se o botao load nao for pressionado(==0), retornar nada
     else(inFile <- input$file1) # caso contrario, salvar o caminho do arquivo carregado em inFile
@@ -1028,10 +1084,19 @@ shinyServer(function(input, output, session) {
     {
       raw_data <- read.csv(inFile$datapath, header=TRUE, sep=input$sep, dec=input$dec,quote='"')
     } else {raw_data <- read.xlsx(inFile$datapath, 1)  }
+    
     # Carregamos o arquivo em um objeto
     
     
     raw_data # tabela final a ser mostrada. 
+    
+  })
+  
+  rawData <- reactive({
+    
+    switch(input$df_select, 
+           "Fazer o upload" = upData(),
+           "Uilitzar o dado de exemplo" = ex)
     
   })
   
@@ -1856,14 +1921,14 @@ shinyServer(function(input, output, session) {
         arrange(x) %>% 
         mutate(x = as.factor(x) )
       
-      x <-  ggplot(graph_bdq, aes(x = x, y = y) ) + 
+      g <-  ggplot(graph_bdq, aes(x = x, y = y) ) + 
         geom_bar(aes(fill = class), stat = "identity",position = "dodge") +
         labs(x = "Classe de diâmetro (cm)", y = "Número de indivíduos (ha)", fill = NULL) + 
         scale_fill_manual(values =c("firebrick2", "cyan3") ) +
         theme_hc(base_size = 14) 
       #theme_igray(base_size = 14)
       
-      x
+      g
     }
     
     

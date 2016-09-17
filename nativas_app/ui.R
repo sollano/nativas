@@ -28,45 +28,16 @@ shinyUI(
                         
                         sidebarPanel(
                           
-                          h3("Importar os dados"),
+                          h3("Dados"),
                           
-                          fileInput( # input de arquivos
-                            inputId = "file1", # Id
-                            
-                            label = "Selecione o arquivo: (.csv, .txt ou .xlsx)", # nome que sera mostrado na UI
-                            
-                            accept=c('text/csv/xlsx','.csv', ".txt", ".xlsx")), # tipos de arquivos aceitos
+                          radioButtons("df_select", 
+                                       "Fazer o upload de um arquivo, ou utilizar o dado de exemplo?", 
+                                       c("Fazer o upload", "Uilitzar o dado de exemplo"), 
+                                       selected = "Fazer o upload"),
                           
-                          checkboxInput(inputId = "excel",
-                                        label = "Excel (.xls ou .xslx) ?",
-                                        value = F),
-                          
-                          div("Recomendamos o uso do formato .csv", style = "color:blue"),
-                          
-                          radioButtons("df", 
-                                      "Tipo da base de dados:", 
-                                      choices = c("Dados em nivel de arvore",
-                                                  "Dados em nivel de parcela"),
-                                      selected = "Dados em nivel de arvore"
-                                      ),
-                          
-                          radioButtons( # esta da ao usuario opcoes para clicar. Apenas uma e selecionada
-                            inputId='sep',  #Id
-                            label='Separador:', # nome que sera mostrado na UI
-                            choices=c(Virgula=',', "Ponto e Virgula"=';', Tab='\t'), # opcoes e seus nomes
-                            selected=','), # valor que sera selecionado inicialmente
-                          
-                          radioButtons( # esta da ao usuario opcoes para clicar. Apenas uma e selecionada
-                            inputId='dec', # Id
-                            label='Decimal:', # nome que sera mostrado na UI
-                            choices=c(Ponto=".", Virgula=","), # opcoes e seus nomes
-                            selected="."), # valor que sera selecionado inicialmente
-                          
-                          
-                          
-                          actionButton( # botao que o usuario clica, e gera uma acao no server
-                            "Load", # Id
-                            "Carregue o arquivo")
+                           uiOutput("upload") # tipos de arquivos aceitos
+                         
+
                           
                         ), # sidebarPanel
                         
@@ -122,6 +93,10 @@ shinyUI(
                                  sidebarLayout(
                                    
                                    sidebarPanel(
+                                     
+                                     tags$style(type="text/css",
+                                                ".recalculating {opacity: 1.0;}"
+                                     ),
                                      
                                      h3("Matriz de Similaridade"),
                                      
@@ -294,6 +269,10 @@ shinyUI(
                    sidebarLayout(
                      
                      sidebarPanel(
+                       
+                       tags$style(type="text/css",
+                                  ".recalculating {opacity: 1.0;}"
+                       ),
                        
                        h3("BDq Meyer"),
                        
@@ -667,6 +646,10 @@ shinyUI(
                               sidebarLayout(
                                 
                                 sidebarPanel(
+                                  
+                                  tags$style(type="text/css",
+                                             ".recalculating {opacity: 1.0;}"
+                                  ),
                                   
                                   h3("Download de graficos"),
                                   
