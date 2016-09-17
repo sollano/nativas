@@ -4,13 +4,37 @@ estrutura = function(data, col.especies, col.dap, col.parcelas, area.parcela, es
     PLOTS = col.parcelas
     # alterei aqui para areaplot poder ser uma coluna do data frame
     if(is.numeric(area.parcela) ){AREA.PLOT = area.parcela}else(AREA.PLOT = mean(data[,area.parcela],na.rm = T ) )
+    
+    
+    # Coloquei estes dois if statements, para que o usuario possa deixar
+    # de preencher a variavel, e a funcao continue rodando
+    # (adicionei o "" por causa do app)
+    if(missing(est.vertical)||is.null(est.vertical)||est.vertical==F||est.vertical==""){
+       est.vertical = NA }
+    
+    if(missing(est.interno)||is.null(est.interno)||est.interno==F||est.interno==""){
+      est.interno = NA }
+    
+    
     VERTICAL = est.vertical
     INTERNA = est.interno
     NI = nao.identificada
     
     # Ajustar formato categórico
-    data[,VERTICAL] = as.factor(data[,VERTICAL])
-    data[,INTERNA] = as.factor(data[,INTERNA])
+    
+    # tive que colocar estes if statements aqui tambem,
+    # para caso as variaveis opcionais nao sejam inseridas
+    if(!is.na(est.vertical)){
+      
+      data[,VERTICAL] = as.factor(data[,VERTICAL])
+
+    }
+    
+    if(!is.na(est.interno)){
+      
+      data[,INTERNA] = as.factor(data[,INTERNA])
+      
+    }
     
     # Remover NA
     data = data[!is.na(data[SPECIES]),]

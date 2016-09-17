@@ -26,6 +26,7 @@ bdq.meyer = function(data, col.parcelas, col.dap, area.parcela, intervalo.classe
   # Alterei aqui para a area poder ser inserida em m2
   DD$IndvHectare = round(DD$NumIndv / ((AREA.PLOT/10000) * nplots), 1)
   DD = DD[DD$CentroClasse >= DBH.MIN,]
+  DD = DD[DD$IndvHectare > 0,]
   rm(freq)
   
   # Meyer
