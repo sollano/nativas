@@ -32,7 +32,7 @@ shinyUI(
                           
                           radioButtons("df_select", 
                                        "Fazer o upload de um arquivo, ou utilizar o dado de exemplo?", 
-                                       c("Fazer o upload", "Uilitzar o dado de exemplo"), 
+                                       c("Fazer o upload", "Utilizar o dado de exemplo"), 
                                        selected = "Fazer o upload"),
                           
                            uiOutput("upload") # tipos de arquivos aceitos
@@ -626,7 +626,7 @@ shinyUI(
                                                 "Nivel Parcela")),
                                   
                                   selectInput("datasetformat",
-                                              "Escolha o Formato da tabela:",
+                                              "Escolha o formato da tabela:",
                                               choices = c("Valor separado por Virgulas (.CSV)" = ".csv",
                                                           "Planilha do Excel (.xlsx)" = ".xlsx")
                                   ),
