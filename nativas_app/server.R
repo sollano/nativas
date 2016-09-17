@@ -1763,6 +1763,21 @@ shinyServer(function(input, output, session) {
   }) 
   
   
+  
+  # Inventario ####
+  
+  # Dado utilizado no inventario ####
+  
+  # switch que muda o dado a ser utilizado
+  invData <- reactive({
+    
+    switch(input$df, 
+           "Dados em nivel de arvore" = newData(),
+           "Dados em nivel de parcela" = rawData() )
+    
+  })
+  
+  
   # Totalização de Parcelas ####
   
   # dados / funcao inv_summary
@@ -1959,21 +1974,12 @@ shinyServer(function(input, output, session) {
   
   # ACS ####
   
-  # switch que muda o dado a ser utilizado na funcao acs
-  acsData <- reactive({
-    
-    switch(input$dfacs, 
-           "Nivel Parcela" = rawData(), 
-           "Nivel Arv/Parcela" = newData() )
-    
-  })
-  
-  # funcao acs aplicada em acsData
+  # funcao acs aplicada em invData
   tabacs <- reactive({
     
     if(input$Loadacs){
       
-      dados <- acsData()
+      dados <- invData()
       
       x <-     acs(df             = dados,
                    area_total     = input$area_totalacs, 
@@ -1991,11 +1997,11 @@ shinyServer(function(input, output, session) {
     
   })
   
-  # UI: as opcoes (choices) sao os nomes de asData
+  # UI: as opcoes (choices) sao os nomes de invData
   
   output$selec_area_totalacs <- renderUI({
     
-    data <- acsData()
+    data <- invData()
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       'area_totalacs', # Id
@@ -2012,7 +2018,7 @@ shinyServer(function(input, output, session) {
   
   output$selec_area_parcelaacs <- renderUI({
     
-    data <- acsData()
+    data <- invData()
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       'area_parcelaacs', # Id
@@ -2029,7 +2035,7 @@ shinyServer(function(input, output, session) {
   
   output$selec_VCCacs <- renderUI({
     
-    data <- acsData()
+    data <- invData()
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       'VCCacs', # Id
@@ -2046,7 +2052,7 @@ shinyServer(function(input, output, session) {
   
   output$selec_idadeacs <- renderUI({
     
-    data <- acsData()
+    data <- invData()
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       'idadeacs', # Id
@@ -2063,7 +2069,7 @@ shinyServer(function(input, output, session) {
   
   output$selec_gruposacs <- renderUI({
     
-    data <- acsData()
+    data <- invData()
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       'gruposacs', # Id
@@ -2097,21 +2103,12 @@ shinyServer(function(input, output, session) {
   
   # ACE ####
   
-  # switch que muda o dado a ser utilizado na funcao ace
-  aceData <- reactive({
-    
-    switch(input$dface, 
-           "Nivel Parcela" = rawData(), 
-           "Nivel Arv/Parcela" = newData() )
-    
-  })
-  
-  # resultado 1 da funcao ace aplicada em aceData
+  # resultado 1 da funcao ace aplicada em invData
   tabace1 <- reactive({
     
     if(input$Loadace){
       
-      dados <- aceData()
+      dados <- invData()
       
       x <- ace(df             = dados, 
                area_estrato   = input$area_estratoace, 
@@ -2129,12 +2126,12 @@ shinyServer(function(input, output, session) {
     
   })
   
-  # resultado 2 da funcao ace aplicada em aceData
+  # resultado 2 da funcao ace aplicada em invData
   tabace2 <- reactive({
     
     if(input$Loadace){ 
       
-      dados <- aceData()
+      dados <- invData()
       
       x <- ace(df = dados, 
                area_estrato   = input$area_estratoace, 
@@ -2153,11 +2150,11 @@ shinyServer(function(input, output, session) {
     
   })
   
-  # UI: as opcoes (choices) sao os nomes de asData
+  # UI: as opcoes (choices) sao os nomes de invData
   
   output$selec_area_totalace <- renderUI({
     
-    data <- aceData()
+    data <- invData()
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       'area_estratoace', # Id
@@ -2174,7 +2171,7 @@ shinyServer(function(input, output, session) {
   
   output$selec_area_parcelaace <- renderUI({
     
-    data <- aceData()
+    data <- invData()
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       'area_parcelaace', # Id
@@ -2191,7 +2188,7 @@ shinyServer(function(input, output, session) {
   
   output$selec_VCCace <- renderUI({
     
-    data <- aceData()
+    data <- invData()
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       'VCCace', # Id
@@ -2208,7 +2205,7 @@ shinyServer(function(input, output, session) {
   
   output$selec_gruposace <- renderUI({
     
-    data <- aceData()
+    data <- invData()
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       'gruposace', # Id
@@ -2226,7 +2223,7 @@ shinyServer(function(input, output, session) {
   
   output$selec_idadeace <- renderUI({
     
-    data <- aceData()
+    data <- invData()
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       'idadeace', # Id
@@ -2277,21 +2274,12 @@ shinyServer(function(input, output, session) {
   
   # AS ####
   
-  # switch que muda o dado a ser utilizado na funcao as
-  asData <- reactive({
-    
-    switch(input$dfas, 
-           "Nivel Parcela" = rawData(), 
-           "Nivel Arv/Parcela" = newData() )
-    
-  })
-  
-  # funcao as aplicado em asData
+  # funcao as aplicado em invData
   tabas <- reactive({
     
     if(input$Loadas){ 
       
-      dados <- asData()
+      dados <- invData()
       
       x <- as_diffs(df             = dados, 
                     area_total     = input$area_totalas,
@@ -2309,11 +2297,11 @@ shinyServer(function(input, output, session) {
     
   }) 
   
-  # UI: as opcoes (choices) sao os nomes de asData
+  # UI: as opcoes (choices) sao os nomes de invData
   
   output$selec_area_totalas <- renderUI({
     
-    data <- asData()
+    data <- invData()
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       'area_totalas', # Id
@@ -2330,7 +2318,7 @@ shinyServer(function(input, output, session) {
   
   output$selec_area_parcelaas <- renderUI({
     
-    data <- asData()
+    data <- invData()
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       'area_parcelaas', # Id
@@ -2347,7 +2335,7 @@ shinyServer(function(input, output, session) {
   
   output$selec_VCCas <- renderUI({
     
-    data <- asData()
+    data <- invData()
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       'VCCas', # Id
@@ -2364,7 +2352,7 @@ shinyServer(function(input, output, session) {
   
   output$selec_idadeas <- renderUI({
     
-    data <- asData()
+    data <- invData()
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       'idadeas', # Id
@@ -2381,7 +2369,7 @@ shinyServer(function(input, output, session) {
   
   output$selec_gruposas <- renderUI({
     
-    data <- asData()
+    data <- invData()
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       'gruposas', # Id

@@ -33,7 +33,7 @@ shinyUI(
                           fileInput( # input de arquivos
                             inputId = "file1", # Id
                             
-                            label = h4("Selecione o arquivo: (.csv, .txt ou .xlsx)"), # nome que sera mostrado na UI
+                            label = "Selecione o arquivo: (.csv, .txt ou .xlsx)", # nome que sera mostrado na UI
                             
                             accept=c('text/csv/xlsx','.csv', ".txt", ".xlsx")), # tipos de arquivos aceitos
                           
@@ -42,6 +42,13 @@ shinyUI(
                                         value = F),
                           
                           div("Recomendados o uso do formato .csv", style = "color:blue"),
+                          
+                          radioButtons("df", 
+                                      "Tipo da base de dados:", 
+                                      choices = c("Dados em nivel de arvore",
+                                                  "Dados em nivel de parcela"),
+                                      selected = "Dados em nivel de arvore"
+                                      ),
                           
                           radioButtons( # esta da ao usuario opcoes para clicar. Apenas uma e selecionada
                             inputId='sep',  #Id
@@ -69,259 +76,270 @@ shinyUI(
                       ) # sidebarLayout
              ), # tabPanel Upload  de dados
              
-             # Painel I. de agregacao ####
-             tabPanel("I. de agregação",
-                      sidebarLayout(
-                        sidebarPanel(
-                          
-                          h3("Índices de agregação"),
-                          
-                          uiOutput("selec_especiesagreg"),
-                          
-                          uiOutput("selec_parcelasagreg"),
-                          
-                          h4("Rotular espécies não identificadas:"),
-                          
-                          radioButtons("CBagreg",
-                                       "Escolher rótulo da lista de especies, ou inserir manualmente?",
-                                        c("lista de especies", "Manualmente"),
-                                       "Manualmente"),
-
-                          uiOutput("selec_rotuloNIagreg"),
-                          
-                          actionButton( # botao que o usuario clica, e gera uma acao no server
-                            "Loadagreg", # Id
-                            "rodar")
-                          
-                        ), #sidebarPanel
-                        mainPanel(
-                          
-                          DT::dataTableOutput("agreg")
-                          
-                        ) # mainPanel
-                      ) #sidebarLayout
-             ), #tabPanel Agregate
+             # NavbarMenu Indices ####
              
+             navbarMenu("Índices",
+                        
+                        # Painel I. de diversidade ####
+                        
+                        tabPanel("I. de diversidade",
+                                 sidebarLayout(
+                                   
+                                   sidebarPanel(
+                                     
+                                     h3("Índices de diversidade"),
+                                     
+                                     uiOutput("selec_especiesdiv"),
+                                     
+                                     h4("Rotular espécies não identificadas:"),
+                                     
+                                     radioButtons("CBdiv",
+                                                  "Escolher rótulo da lista de especies, ou inserir manualmente?",
+                                                  c("lista de especies", "Manualmente"),
+                                                  "Manualmente"),
+                                     
+                                     uiOutput("selec_rotuloNIdiv"),
+                                     
+                                     actionButton( # botao que o usuario clica, e gera uma acao no server
+                                       "Loaddiv", # Id
+                                       "rodar")
+                                     
+                                     
+                                   ), # sidebar Panel
+                                   mainPanel(
+                                     DT::dataTableOutput("div", "70%")
+                                   ) # main Panel
+                                   
+                                 )# Sidebar layout
+                                 
+                        ), # tab panel Diversidade
+                        
+                        
+                        
+                        # Painel Matriz Similaridade ####
+                        
+                        tabPanel("M. Similaridade",
+                                 sidebarLayout(
+                                   
+                                   sidebarPanel(
+                                     
+                                     h3("Matriz de Similaridade"),
+                                     
+                                     uiOutput("selec_especiesmsim"),
+                                     
+                                     uiOutput("selec_parcelasmsim"),
+                                     
+                                     h4("Rotular espécies não identificadas:"),
+                                     
+                                     selectizeInput("CBmsim",
+                                                    "Escolher rótulo da lista de especies, ou inserir manualmente?",
+                                                    c("lista de especies", "Manualmente"),
+                                                    "Manualmente"),
+                                     
+                                     uiOutput("selec_rotuloNImsim"),
+                                     
+                                     actionButton( # botao que o usuario clica, e gera uma acao no server
+                                       "Loadmsim", # Id
+                                       "rodar")
+                                     
+                                   ), # sidebar Panel
+                                   mainPanel(
+                                     tabsetPanel(
+                                       tabPanel("Jaccard", DT::dataTableOutput("msim1") ),
+                                       tabPanel("Sorensen", DT::dataTableOutput("msim2") ) )
+                                   ) # main Panel
+                                   
+                                 )# Sidebar layout
+                                 
+                        ), # tab Panel Matriz Similaridade
+                        
+                        # Painel Pareado Similaridade ####
+                        
+                        tabPanel("P. Similaridade",
+                                 sidebarLayout(
+                                   
+                                   sidebarPanel(
+                                     
+                                     h3("Pareado Similaridade"),
+                                     
+                                     uiOutput("selec_especiespsim"),
+                                     
+                                     uiOutput("selec_parcelaspsim"),
+                                     
+                                     uiOutput("selec_psimselec_parc1"),
+                                     
+                                     uiOutput("selec_psimselec_parc2"),
+                                     
+                                     
+                                     h4("Rotular espécies não identificadas:"),
+                                     
+                                     selectizeInput("CBpsim",
+                                                    "Escolher rótulo da lista de especies, ou inserir manualmente?",
+                                                    c("lista de especies", "Manualmente"),
+                                                    "Manualmente"),
+                                     
+                                     uiOutput("selec_rotuloNIpsim"),
+                                     
+                                     actionButton( # botao que o usuario clica, e gera uma acao no server
+                                       "Loadpsim", # Id
+                                       "rodar")
+                                     
+                                   ), # sidebar Panel
+                                   mainPanel(
+                                     DT::dataTableOutput("psim") 
+                                   ) # main Panel
+                                   
+                                 )# Sidebar layout
+                                 
+                        ), # tab Panel Pareado Similaridade
+                        
+                        
+                        # Painel I. de agregacao ####
+                        tabPanel("I. de agregação",
+                                 sidebarLayout(
+                                   sidebarPanel(
+                                     
+                                     h3("Índices de agregação"),
+                                     
+                                     uiOutput("selec_especiesagreg"),
+                                     
+                                     uiOutput("selec_parcelasagreg"),
+                                     
+                                     h4("Rotular espécies não identificadas:"),
+                                     
+                                     radioButtons("CBagreg",
+                                                  "Escolher rótulo da lista de especies, ou inserir manualmente?",
+                                                  c("lista de especies", "Manualmente"),
+                                                  "Manualmente"),
+                                     
+                                     uiOutput("selec_rotuloNIagreg"),
+                                     
+                                     actionButton( # botao que o usuario clica, e gera uma acao no server
+                                       "Loadagreg", # Id
+                                       "rodar")
+                                     
+                                   ), #sidebarPanel
+                                   mainPanel(
+                                     
+                                     DT::dataTableOutput("agreg")
+                                     
+                                   ) # mainPanel
+                                 ) #sidebarLayout
+                        ) #tabPanel Agregate
+                        
+                # navbarMenu end ####
+
+             ), # NavbarMenu Indices
              
              # Painel Estrutura ####
-             
-             tabPanel("Estrutura",
-               sidebarLayout(
-                 sidebarPanel(
-                   
-                   h3("Estrutura"),
-                   
-                   uiOutput("selec_especiesestr"),
-                   
-                   uiOutput("selec_dapestr"),
-                   
-                   uiOutput("selec_parcelasestr"),
-                   
-                   uiOutput("selec_area.parcelaestr"),
-                   
-                   h4("Rotular espécies não identificadas:"),
-                   
-                   radioButtons("CBestr",
-                                  "Escolher rótulo da lista de especies, ou inserir manualmente?",
-                                  c("lista de especies", "Manualmente"),
-                                  "Manualmente"),
-                   
-                   uiOutput("selec_rotuloNIestr"),
-                   
-                   h3("Variaveis opcionais:"),
-                   
-                   uiOutput("selec_est.verticalestr"),
-                   
-                   uiOutput("selec_est.internoestr"),
-                   
-                   sliderInput("cdestr", 
-                               label = "Selecione o nº de casas decimais:", 
-                               min = 0, 
-                               max = 10, 
-                               value = 2,
-                               step = 1),
-                   
-                 
-                   
-                   actionButton( # botao que o usuario clica, e gera uma acao no server
-                     "Loadestr", # Id
-                     "rodar")
-                   
-                 ), # sidebar Panel
-                
-                  mainPanel(
-                   DT::dataTableOutput("estr")
-                           ) # main Panel
-                 
-               )# Sidebar layout
-               
-             ),# Panel Estrutura
-             
-             
-             # Painel Diversidade ####
-             
-             tabPanel("I. de diversidade",
-               sidebarLayout(
-                             
-                             sidebarPanel(
-                               
-                               h3("Índices de diversidade"),
-                               
-                               uiOutput("selec_especiesdiv"),
-                               
-                               h4("Rotular espécies não identificadas:"),
-                               
-                               radioButtons("CBdiv",
-                                            "Escolher rótulo da lista de especies, ou inserir manualmente?",
-                                            c("lista de especies", "Manualmente"),
-                                            "Manualmente"),
-                               
-                               uiOutput("selec_rotuloNIdiv"),
-                               
-                               actionButton( # botao que o usuario clica, e gera uma acao no server
-                                 "Loaddiv", # Id
-                                 "rodar")
-                               
-                               
-                             ), # sidebar Panel
-                             mainPanel(
-                               DT::dataTableOutput("div", "70%")
-                             ) # main Panel
-                             
-               )# Sidebar layout
-               
-             ), # tab panel Diversidade
-             
-             
-             # Painel BDq ####   
-             tabPanel("BDq Meyer",
-                      sidebarLayout(
-                        
-                        sidebarPanel(
-                          
-                          h3("BDq Meyer"),
-
-                          uiOutput("selec_parcelasBDq"),
-                          
-                          uiOutput("selec_dapBDq"),
-                          
-                          uiOutput("selec_area.parcelaBDq"),
-                          
-                          sliderInput("intervalo.classeBDq", 
-                                      label = "Intervalo de classe:", 
-                                      min = 0, 
-                                      max = 10, 
-                                      value = 5,
-                                      step = 1),
-                          
-                          sliderInput("min.dapBDq", 
-                                      label = "DAP mínimo::", 
-                                      min = 0, 
-                                      max = 10, 
-                                      value = 5,
-                                      step = 1),
-                          
-                          sliderInput("i.licourtBDq", 
-                                      label = "Quociente de Licourt:", 
-                                      min = 0, 
-                                      max = 5, 
-                                      value = 1.3,
-                                      step = .1),
-                          
-                          actionButton( # botao que o usuario clica, e gera uma acao no server
-                            "LoadBDq", # Id
-                            "rodar")
-                          
-                        ), # sidebar Panel
-                        mainPanel(
-                          tabsetPanel(
-                            tabPanel("BDq", DT::dataTableOutput("BDq1") ),
-                            tabPanel("Coeficientes", DT::dataTableOutput("BDq3") )
-                          )
-                          
-                        ) # main Panel
-                        
-                      )# Sidebar layout
-                      
-             ), # tab Panel
-             
           
-             # Painel Matriz Similaridade ####
-          
-          tabPanel("M. Similaridade",
+          tabPanel("Estrutura",
                    sidebarLayout(
-                     
                      sidebarPanel(
-
-                       h3("Matriz de Similaridade"),
                        
-                       uiOutput("selec_especiesmsim"),
+                       h3("Estrutura"),
                        
-                       uiOutput("selec_parcelasmsim"),
+                       uiOutput("selec_especiesestr"),
+                       
+                       uiOutput("selec_dapestr"),
+                       
+                       uiOutput("selec_parcelasestr"),
+                       
+                       uiOutput("selec_area.parcelaestr"),
                        
                        h4("Rotular espécies não identificadas:"),
                        
-                       selectizeInput("CBmsim",
-                                      "Escolher rótulo da lista de especies, ou inserir manualmente?",
-                                      c("lista de especies", "Manualmente"),
-                                      "Manualmente"),
+                       radioButtons("CBestr",
+                                    "Escolher rótulo da lista de especies, ou inserir manualmente?",
+                                    c("lista de especies", "Manualmente"),
+                                    "Manualmente"),
                        
-                       uiOutput("selec_rotuloNImsim"),
+                       uiOutput("selec_rotuloNIestr"),
+                       
+                       h3("Variaveis opcionais:"),
+                       
+                       uiOutput("selec_est.verticalestr"),
+                       
+                       uiOutput("selec_est.internoestr"),
+                       
+                       sliderInput("cdestr", 
+                                   label = "Selecione o nº de casas decimais:", 
+                                   min = 0, 
+                                   max = 10, 
+                                   value = 2,
+                                   step = 1),
+                       
+                       
                        
                        actionButton( # botao que o usuario clica, e gera uma acao no server
-                         "Loadmsim", # Id
+                         "Loadestr", # Id
+                         "rodar")
+                       
+                     ), # sidebar Panel
+                     
+                     mainPanel(
+                       DT::dataTableOutput("estr")
+                     ) # main Panel
+                     
+                   )# Sidebar layout
+                   
+          ),# Panel Estrutura
+          
+          
+          
+             # Painel BDq ####   
+          tabPanel("BDq Meyer",
+                   sidebarLayout(
+                     
+                     sidebarPanel(
+                       
+                       h3("BDq Meyer"),
+                       
+                       uiOutput("selec_parcelasBDq"),
+                       
+                       uiOutput("selec_dapBDq"),
+                       
+                       uiOutput("selec_area.parcelaBDq"),
+                       
+                       sliderInput("intervalo.classeBDq", 
+                                   label = "Intervalo de classe:", 
+                                   min = 0, 
+                                   max = 10, 
+                                   value = 5,
+                                   step = 1),
+                       
+                       sliderInput("min.dapBDq", 
+                                   label = "DAP mínimo::", 
+                                   min = 0, 
+                                   max = 10, 
+                                   value = 5,
+                                   step = 1),
+                       
+                       sliderInput("i.licourtBDq", 
+                                   label = "Quociente de Licourt:", 
+                                   min = 0, 
+                                   max = 5, 
+                                   value = 1.3,
+                                   step = .1),
+                       
+                       actionButton( # botao que o usuario clica, e gera uma acao no server
+                         "LoadBDq", # Id
                          "rodar")
                        
                      ), # sidebar Panel
                      mainPanel(
                        tabsetPanel(
-                         tabPanel("Jaccard", DT::dataTableOutput("msim1") ),
-                         tabPanel("Sorensen", DT::dataTableOutput("msim2") ) )
-                       ) # main Panel
-                     
-                   )# Sidebar layout
-                   
-          ), # tab Panel Matriz Similaridade
-          
-             # Painel Pareado Similaridade ####
-          
-          tabPanel("P. Similaridade",
-                   sidebarLayout(
-                     
-                     sidebarPanel(
-
-                       h3("Pareado Similaridade"),
-
-                       uiOutput("selec_especiespsim"),
+                         tabPanel("BDq", DT::dataTableOutput("BDq1") ),
+                         tabPanel("Coeficientes", DT::dataTableOutput("BDq3") )
+                       )
                        
-                       uiOutput("selec_parcelaspsim"),
-                       
-                       uiOutput("selec_psimselec_parc1"),
-                      
-                        uiOutput("selec_psimselec_parc2"),
-                       
-                       
-                       h4("Rotular espécies não identificadas:"),
-                       
-                       selectizeInput("CBpsim",
-                                      "Escolher rótulo da lista de especies, ou inserir manualmente?",
-                                      c("lista de especies", "Manualmente"),
-                                      "Manualmente"),
-                       
-                       uiOutput("selec_rotuloNIpsim"),
-                       
-                       actionButton( # botao que o usuario clica, e gera uma acao no server
-                         "Loadpsim", # Id
-                         "rodar")
-                       
-                     ), # sidebar Panel
-                     mainPanel(
-                       DT::dataTableOutput("psim") 
                      ) # main Panel
                      
                    )# Sidebar layout
                    
-          ), # tab Panel Pareado Similaridade
+          ), # tab Panel
+          
+          
           
              # NavbarMenu Inventario ####
 
@@ -384,14 +402,6 @@ shinyUI(
 
                                      h3("Amostragem Casual Simples"),
 
-                                     selectInput("dfacs", 
-                                                 h4("Selecione o Dataset:"), 
-                                                 choices = c("Nivel Parcela", 
-                                                             "Nivel Arv/Parcela"),
-                                                 selected = "Nivel Arv/Parcela"),
-                                     
-                                     h4("Selecione as Variaveis:"),
-                                     
                                      uiOutput("selec_area_totalacs"),
                                      
                                      uiOutput("selec_area_parcelaacs"),
@@ -463,14 +473,6 @@ shinyUI(
                                    sidebarPanel(
                                      
                                      h3("Amostragem Casual Estratificada"),
-                                     
-                                     selectInput("dface", 
-                                                 h4("Selecione o Dataset:"), 
-                                                 choices = c("Nivel Parcela", 
-                                                             "Nivel Arv/Parcela"),
-                                                 selected = "Nivel Arv/Parcela"),
-                                     
-                                     h4("Selecione as Variaveis:"),
                                      
                                      uiOutput("selec_area_totalace"),
                                      
@@ -551,14 +553,6 @@ shinyUI(
                                      
                                      h3("Amostragem Sistematica"),
                                      
-                                     selectInput("dfas", 
-                                                 h4("Selecione o Dataset:"), 
-                                                 choices = c("Nivel Parcela", 
-                                                             "Nivel Arv/Parcela"),
-                                                 selected = "Nivel Arv/Parcela"),
-                                     
-                                     h4("Selecione as Variaveis:"),
-                                     
                                      uiOutput("selec_area_totalas"),
                                      
                                      uiOutput("selec_area_parcelaas"),
@@ -619,7 +613,7 @@ shinyUI(
                         
                         
                           # navbar Menu end ####
-                        ),# navbar Menu
+                        ),# navbar Menu inventario
              
              # Painel Download ####
              
