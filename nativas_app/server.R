@@ -1291,6 +1291,31 @@ shinyServer(function(input, output, session) {
     
   })
   
+  output$slider_graphmsim1 <- renderUI({
+    
+    validate(need(input$mainPanel_Indices == "id_msim1_graph", "" )  )
+    
+    sliderInput("slider_msim1_graph", 
+                label = "Selecione o número de clusters:", 
+                min = 0, 
+                max = 10, 
+                value = 3,
+                step = 1)
+    
+  })
+  output$slider_graphmsim2 <- renderUI({
+    
+    validate(need(input$mainPanel_Indices == "id_msim2_graph", "" )  )
+    
+    sliderInput("slider_msim2_graph", 
+                label = "Selecione o número de clusters:", 
+                min = 0, 
+                max = 10, 
+                value = 3,
+                step = 1)
+    
+  })
+  
   
   # tabela
   output$msim1 <- renderDataTable({
@@ -1324,13 +1349,22 @@ shinyServer(function(input, output, session) {
     if(input$Loadmsim)
     {
       dados <- rawData()
-      ms <- as.data.frame(tabmsimilaridade1() ) 
+      df <- as.data.frame(tabmsimilaridade1() ) 
       
-      names(ms) <- levels( as.factor( dados[,input$col.parcelasmsim] ) )
+      rownames(df) <- levels( as.factor( dados[,input$col.parcelasmsim] ) )
       
-      ms_hclust <- hclust(as.dist(ms) ) #?
+      hc    <- hclust(dist(df), "complete") # heirarchal clustering
+      dendr <- dendro_data(hc) # convert for ggplot
+      clust    <- cutree(hc,k=input$slider_msim1_graph)                    # find 2 clusters
+      clust.df <- data.frame(label=names(clust), cluster=factor(clust))
       
-      x <- ggdendrogram(ms_hclust)
+      # dendr[["labels"]] has the labels, merge with clust.df based on label column
+      dendr[["labels"]] <- merge(dendr[["labels"]],clust.df, by="label")
+      # plot the dendrogram; note use of color=cluster in geom_text(...)
+
+      x <- ggdendrogram(dendr) +
+        geom_text(data=label(dendr), aes(x, y, label=label, hjust=.5,color=cluster), size=4) +
+        theme_dendro()
       
       x
       
@@ -1349,23 +1383,30 @@ shinyServer(function(input, output, session) {
     g
     
   })
-  
-  
+
   msim2_graph <- reactive({
     
     if(input$Loadmsim)
     {
       dados <- rawData()
-      ms <- as.data.frame(tabmsimilaridade2() ) 
+      df <- as.data.frame(tabmsimilaridade2() ) 
       
-      names(ms) <- levels( as.factor( dados[,input$col.parcelasmsim] ) )
+      rownames(df) <- levels( as.factor( dados[,input$col.parcelasmsim] ) )
       
-      ms_hclust <- hclust(as.dist(ms) ) #?
+      hc    <- hclust(dist(df), "complete") # heirarchal clustering
+      dendr <- dendro_data(hc) # convert for ggplot
+      clust    <- cutree(hc,k=input$slider_msim2_graph) 
+      clust.df <- data.frame(label=names(clust), cluster=factor(clust))
       
-      x <- ggdendrogram(ms_hclust)
+      # dendr[["labels"]] has the labels, merge with clust.df based on label column
+      dendr[["labels"]] <- merge(dendr[["labels"]],clust.df, by="label")
+      # plot the dendrogram; note use of color=cluster in geom_text(...)
       
-      x
-    }
+      x <- ggdendrogram(dendr) +
+        geom_text(data=label(dendr), aes(x, y, label=label, hjust=.5,color=cluster), size=4) +
+        theme_dendro()
+      
+      x    }
     
     
     

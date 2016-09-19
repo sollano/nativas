@@ -89,7 +89,7 @@ shinyUI(
                         
                         # Painel Matriz Similaridade ####
                         
-                        tabPanel("M. Similaridade",
+                        tabPanel("M. Similaridade", 
                                  sidebarLayout(
                                    
                                    sidebarPanel(
@@ -113,17 +113,21 @@ shinyUI(
                                      
                                      uiOutput("selec_rotuloNImsim"),
                                      
+                                     uiOutput("slider_graphmsim1"),
+                                     
+                                     uiOutput("slider_graphmsim2"),
+                                     
                                      actionButton( # botao que o usuario clica, e gera uma acao no server
                                        "Loadmsim", # Id
                                        "rodar")
                                      
                                    ), # sidebar Panel
                                    mainPanel(
-                                     tabsetPanel(
+                                     tabsetPanel(id = "mainPanel_Indices",
                                        tabPanel("Jaccard", DT::dataTableOutput("msim1") ),
-                                       tabPanel("Dendrograma Jaccard", plotOutput("msim1_graph_")),
+                                       tabPanel("Dendrograma Jaccard", plotOutput("msim1_graph_"), value = "id_msim1_graph"),
                                        tabPanel("Sorensen", DT::dataTableOutput("msim2") ),
-                                       tabPanel("Dendrograma Sorensen", plotOutput("msim2_graph_") )  )
+                                       tabPanel("Dendrograma Sorensen", plotOutput("msim2_graph_"), value = "id_msim2_graph" )  )
                                    ) # main Panel
                                    
                                  )# Sidebar layout
