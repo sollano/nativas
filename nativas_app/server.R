@@ -1291,30 +1291,49 @@ shinyServer(function(input, output, session) {
     
   })
   
-  output$slider_graphmsim1 <- renderUI({
+  output$rb_slider_graphmsim1 <- renderUI({
     
     validate(need(input$mainPanel_Indices == "id_msim1_graph", "" )  )
     
-    sliderInput("slider_msim1_graph", 
-                label = "Selecione o número de clusters:", 
-                min = 0, 
-                max = 10, 
-                value = 3,
-                step = 1)
+   list( 
+     
+     radioButtons("rb_msim1_graph", 
+                  "Selecione o método de classificação:", 
+                  c("Vizinho mais próximo"  = "single", 
+                    "Vizinho mais distante" = "complete", 
+                    "Distância euclidiana"  = "average"), 
+                  selected = "complete"),
+     
+     sliderInput("slider_msim1_graph", 
+                     label = "Selecione o número de clusters:", 
+                     min = 0, 
+                     max = 10, 
+                     value = 3,
+                     step = 1) )
     
   })
-  output$slider_graphmsim2 <- renderUI({
+  output$rb_slider_graphmsim2 <- renderUI({
     
     validate(need(input$mainPanel_Indices == "id_msim2_graph", "" )  )
+    
+    list(  
+      
+      radioButtons("rb_msim2_graph", 
+                   "Selecione o método de classificação:", 
+                   c("Vizinho mais próximo"  = "single", 
+                     "Vizinho mais distante" = "complete", 
+                     "Distância euclidiana"  = "average"), 
+                   selected = "complete"),
+      
     
     sliderInput("slider_msim2_graph", 
                 label = "Selecione o número de clusters:", 
                 min = 0, 
                 max = 10, 
                 value = 3,
-                step = 1)
+                step = 1) )
     
-  })
+  }) 
   
   
   # tabela
@@ -1353,7 +1372,7 @@ shinyServer(function(input, output, session) {
       
       rownames(df) <- levels( as.factor( dados[,input$col.parcelasmsim] ) )
       
-      hc    <- hclust(dist(df), "complete") # heirarchal clustering
+      hc    <- hclust(dist(df), input$rb_msim1_graph) # heirarchal clustering
       dendr <- dendro_data(hc) # convert for ggplot
       clust    <- cutree(hc,k=input$slider_msim1_graph)                    # find 2 clusters
       clust.df <- data.frame(label=names(clust), cluster=factor(clust))
@@ -1393,7 +1412,7 @@ shinyServer(function(input, output, session) {
       
       rownames(df) <- levels( as.factor( dados[,input$col.parcelasmsim] ) )
       
-      hc    <- hclust(dist(df), "complete") # heirarchal clustering
+      hc    <- hclust(dist(df), input$rb_msim2_graph) # heirarchal clustering
       dendr <- dendro_data(hc) # convert for ggplot
       clust    <- cutree(hc,k=input$slider_msim2_graph) 
       clust.df <- data.frame(label=names(clust), cluster=factor(clust))

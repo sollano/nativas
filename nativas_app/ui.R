@@ -113,9 +113,9 @@ shinyUI(
                                      
                                      uiOutput("selec_rotuloNImsim"),
                                      
-                                     uiOutput("slider_graphmsim1"),
+                                     uiOutput("rb_slider_graphmsim1"),
                                      
-                                     uiOutput("slider_graphmsim2"),
+                                     uiOutput("rb_slider_graphmsim2"),
                                      
                                      actionButton( # botao que o usuario clica, e gera uma acao no server
                                        "Loadmsim", # Id
