@@ -1,22 +1,23 @@
 
-
 shinyUI(
-  navbarPage("Inventario de Nativas",
+  navbarPage("Inventário de Nativas (BETA)",
              
-             theme = "bootstrap8.css", # seleciona um tema contido na pasta www
+             theme = "green_yeti.css",
+            # theme = "green.css", # seleciona um tema contido na pasta www
+            # theme = shinythemes::shinytheme("paper"), # seleciona um tema contido na pasta www
              
              # Painel Intro ####          
              tabPanel( "Intro" ,
                        fluidRow(
-                         column(6,
+                         column(5,
                                 includeMarkdown("about.md")
                          ),
                          column(6,
-                                img(class="img-polaroid",
-                                    src="http://www.wernermadeiras.com.br/imagens/noticias/capa1.jpg"  ),
-                                tags$small(
-                                  "Source: Google images"
-                                )
+                                img(contentType = "image/jpg",
+                                    src="intro_picture.jpg",
+                                    width = 770,
+                                    height = 700)
+                               
                          )
                        ) # fluid row
              ), # Painel Intro             
@@ -338,7 +339,16 @@ shinyUI(
                                    
                                    sidebarPanel(
                                      
-                                     uiOutput("tot_parc_ui"),
+                                     uiOutput("tot_parc_ui1"),
+                                     
+                                     h4("Area total:"),
+                                     
+                                     radioButtons("area_tot_radio_new",
+                                                  "Escolher coluna da lista de colunas, ou inserir a área manualmente?",
+                                                  c("Lista de colunas", "Manualmente"),
+                                                  "Manualmente"),
+                                     
+                                     uiOutput("tot_parc_ui2"),
                                      
                                      actionButton( # botao que o usuario clica, e gera uma acao no server
                                        "Loadnew", # Id

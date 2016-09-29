@@ -7,7 +7,6 @@ source("agregacao.R")
 source("inv_summary.R")
 
 inv = read.csv("cauaxi 2012.csv")
-#inv2 = read.csv("cauaxi_parc10000m2.csv")
 head(estrutura(inv, "scientific.name", "DBH", "transect", 1000)) # horizontal
 head(estrutura(inv, "scientific.name", "DBH", "transect", 1000, "canopy")) # vertical
 head(estrutura(inv, "scientific.name", "DBH", "transect", 1000, "canopy", "light")) # vertical + interna
@@ -31,6 +30,21 @@ diversidade(inv, "scientific_name")
 m.similaridade(inv, "scientific_name", "transect")
 bdq.meyer(inv, "transect", "DBH_11", 1000)[1]
 agregacao(inv, "scientific_name", "transect")
+
+inv = read.csv("nativas_app/examples/Inventory_exemplo.csv")
+head(estrutura(inv, "nome.cient", "dap", "transecto", 1000)) # horizontal
+head(estrutura(inv, "nome.cient", "dap", "transecto", "parc.area")) # horizontal
+head(estrutura(inv, "nome.cient", "dap", "transecto", 1000, "pos.copa")) # vertical
+head(estrutura(inv, "nome.cient", "dap", "transecto", 1000, "pos.copa", "luminosidade")) # vertical + interna
+diversidade(inv, "nome.cient", indice = "H")
+diversidade(inv, "nome.cient", indice = "S")
+diversidade(inv, "nome.cient", indice = "Hmax")
+diversidade(inv, "nome.cient", indice = "J")
+diversidade(inv, "nome.cient")
+p.similaridade(inv[inv$transecto == "T01","nome.cient"], inv[inv$transecto == "T02","nome.cient"])
+m.similaridade(inv, "nome.cient", "transecto")
+bdq.meyer(inv, "transecto", "dap", 1000)[[1]]
+agregacao(inv, "nome.cient", "transecto")
 
 # Totalizacao de Parcelas ####
 
