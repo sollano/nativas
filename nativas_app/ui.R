@@ -4,7 +4,7 @@ shinyUI(
              
              theme = "green_yeti.css",
             # theme = "green.css", # seleciona um tema contido na pasta www
-            # theme = shinythemes::shinytheme("paper"), # seleciona um tema contido na pasta www
+            # theme = shinythemes::shinytheme("paper"), # seleciona um tema utilizando pacote
              
              # Painel Intro ####          
              tabPanel( "Intro" ,
@@ -16,7 +16,7 @@ shinyUI(
                                 img(contentType = "image/jpg",
                                     src="intro_picture.jpg",
                                     width = 770,
-                                    height = 700)
+                                    height = 750)
                                
                          )
                        ) # fluid row
@@ -297,7 +297,7 @@ shinyUI(
                        sliderInput("min.dapBDq", 
                                    label = "Selecione o DAP mínimo:", 
                                    min = 0, 
-                                   max = 10, 
+                                   max = 50, 
                                    value = 5,
                                    step = 1),
                        
@@ -341,10 +341,10 @@ shinyUI(
                                      
                                      uiOutput("tot_parc_ui1"),
                                      
-                                     h4("Area total:"),
+                                     h4("Inserir valores de área:"),
                                      
-                                     radioButtons("area_tot_radio_new",
-                                                  "Escolher coluna da lista de colunas, ou inserir a área manualmente?",
+                                     radioButtons("area_radio_new",
+                                                  "Escolher coluna da lista de colunas, ou inserir os valores manualmente?",
                                                   c("Lista de colunas", "Manualmente"),
                                                   "Manualmente"),
                                      
@@ -377,7 +377,16 @@ shinyUI(
                                    sidebarPanel(
 
 
-                                     uiOutput("acs_ui"),
+                                     uiOutput("acs_ui1"),
+                                     
+                                     h4("Inserir valores de área:"),
+                                     
+                                     radioButtons("area_radio_acs",
+                                                  "Escolher coluna da lista de colunas, ou inserir os valores manualmente?",
+                                                  c("Lista de colunas", "Manualmente"),
+                                                  "Lista de colunas"),
+                                     
+                                     uiOutput("acs_ui2"),
                                      
                                      actionButton( # botao que o usuario clica, e gera uma acao no server
                                        "Loadacs", # Id
@@ -435,7 +444,16 @@ shinyUI(
                                    
                                    sidebarPanel(
                                      
-                                     uiOutput("as_ui"),
+                                     uiOutput("as_ui1"),
+                                     
+                                     h4("Inserir valores de área:"),
+                                     
+                                     radioButtons("area_radio_as",
+                                                  "Escolher coluna da lista de colunas, ou inserir os valores manualmente?",
+                                                  c("Lista de colunas", "Manualmente"),
+                                                  "Lista de colunas"),
+                                     
+                                     uiOutput("as_ui2"),
                                      
                                      actionButton( # botao que o usuario clica, e gera uma acao no server
                                        "Loadas", # Id

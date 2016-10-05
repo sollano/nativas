@@ -285,9 +285,10 @@ bdq.meyer = function(data, col.parcelas, col.dap, area.parcela, intervalo.classe
   data[, "CentroClasse"] = data[,"Classe"] * INTERVALO.CLASSE - (INTERVALO.CLASSE / 2)
   
   freq = data.frame(table(data[,"Classe"]))
-  DD = data.frame(Classe = as.numeric(freq[,1]))
+  DD = data.frame(Classe = as.numeric(as.character(freq[,1])) ) # correcao fator para numerico
   DD$CentroClasse = DD$Classe * INTERVALO.CLASSE - (INTERVALO.CLASSE / 2)
   DD$NumIndv = freq[,2]
+  # Alterei aqui para a area poder ser inserida em m2
   DD$IndvHectare = round(DD$NumIndv / ((AREA.PLOT/10000) * nplots), 1)
   DD = DD[DD$CentroClasse >= DBH.MIN,]
   DD = DD[DD$IndvHectare > 0,]
@@ -571,7 +572,7 @@ inv_summary <- function(df,DAP, HT, VCC, area_parcela, groups, area_total,idade,
     as.data.frame
 }
 
-acs <- function(df, area_total, area_parcela, VCC, idade, grupos, alpha = 0.05, Erro = 10, casas_decimais=4, pop="inf",tidy=T){
+acs <- function(df,VCC, area_parcela, area_total, idade, grupos, alpha = 0.05, Erro = 10, casas_decimais=4, pop="inf",tidy=T){
   
   suppressPackageStartupMessages(require(dplyr))
   require(tidyr)
@@ -641,12 +642,12 @@ acs <- function(df, area_total, area_parcela, VCC, idade, grupos, alpha = 0.05, 
   
   x <- x_ %>% 
     plyr::rename(c( "idade"        = "Idade (meses)"                  , 
-                    "n"            = "Numero de Parcelas (n)"         ,
-                    "N"            = "Numero de Parcelas cabiveis (N)", 
+                    "n"            = "Numero de amostras (n)"         ,
+                    "N"            = "Numero de amostras cabiveis (N)", 
                     "CV"           = "Coeficiente de Variancia (CV)"  ,
                     "t"            = "t-student"                      ,
-                    "t_rec"        = "t recalculado"                  ,
-                    "n_recalc"     = "n recalculado"                  ,
+                    "t_rec"        = "t-student recalculado"          ,
+                    "n_recalc"     = "Numero de amostras referente ao erro admitido",
                     "Y"            = "Media geral (Y)"                ,
                     "Sy"           = "Erro-Padrao da Media (Sy)"      ,
                     "Erroabs"      = "Erro Absoluto"                  ,
@@ -689,10 +690,10 @@ acs <- function(df, area_total, area_parcela, VCC, idade, grupos, alpha = 0.05, 
   
 }
 
-ace <- function(df, area_estrato, area_parcela, VCC, grupos, idade, alpha = 0.05, Erro = 10, casas_decimais = 4, pop="inf", tidy=T ){
+ace <- function(df,VCC, area_parcela, area_estrato, grupos, idade, alpha = 0.05, Erro = 10, casas_decimais = 4, pop="inf", tidy=T ){
   
-  suppressPackageStartupMessages(require(dplyr))
   require(tidyr)
+  suppressPackageStartupMessages(require(dplyr))
   require(lazyeval)
   
   if(missing(df)||is.null(df)||df==F||df=="")
@@ -715,7 +716,34 @@ ace <- function(df, area_estrato, area_parcela, VCC, grupos, idade, alpha = 0.05
   
   # argumentos de area podem ser numericos
   if(is.numeric(area_parcela)){df$area_parcela <- area_parcela; area_parcela <- "area_parcela"}
-  if(is.numeric(area_estrato)){df$area_estrato <- area_estrato; area_estrato <- "area_estrato"}
+  
+  if(is.numeric(area_estrato) && length(area_estrato)==1){
+    df$area_estrato <- area_estrato; area_estrato <- "area_estrato"
+    
+    
+  }else if(is.numeric(area_estrato) && length(area_estrato)>1){
+    
+    
+    
+    estrato_name <- grupos[length(grupos)]
+    estratos <- levels(factor(df[[estrato_name]]))
+    
+    if(!all.equal(length(estratos), length(area_estrato))){stop("numero de estratos e número de áreas de estrato não coincidem")}
+    
+    
+    tab_estratos <- data.frame( estratos, area_estrato)
+    
+    area_estrato <- "area_estrato"
+    
+    names(tab_estratos) <- c(estrato_name, "area_estrato")
+    
+    df[[estrato_name]] <- as.factor(df[[estrato_name]] )
+    df <- left_join(df, tab_estratos, by = estrato_name)
+    
+  }
+  
+  
+  #if(!all.equal(length(levels(factor(df[[grupos[length(grupos)]]]))) , length(levels(factor(df[[area_estrato]])))  ) ){stop("numero de estratos e número de áreas de estrato não coincidem")}
   
   
   x_ <- df %>%
@@ -785,10 +813,10 @@ ace <- function(df, area_estrato, area_parcela, VCC, grupos, idade, alpha = 0.05
         "Y" = "Media Estratificada (Y)",
         "CV" = "Coeficiente de Variancia (CV)", 
         "t" = "t-student", 
-        "t_rec" = "t recalculado", 
-        "n_recalc" = "n recalculado",
-        "nj_otimo" = "Numero otimo de parcelas por estrato (nj otimo)", 
-        "n_otimo" = "numero otimo de parcelas (n otimo)", 
+        "t_rec" = "t-student recalculado", 
+        "n_recalc" = "Numero de amostras referente ao erro admitido",
+        "nj_otimo" = "Numero otimo de amostras por estrato (nj otimo)", 
+        "n_otimo" = "numero otimo de amostras (n otimo)", 
         "Yhatj" = "Producao total por estrato (Yhatj)"  ),
       warn_missing = F)
   
@@ -823,10 +851,10 @@ ace <- function(df, area_estrato, area_parcela, VCC, grupos, idade, alpha = 0.05
         "Erroperc" = "Erro Relativo (%)",
         "Yhat" = "Volume total estimado (Yhat)", 
         "Erro_Total" = "Erro Total",
-        "IC_ha_Inf" = "IC (m³/ha) Inferior" ,
-        "IC_ha_Sup" = "IC (m³/ha) Superior",
-        "IC_Total_inf" = "IC Total (m³) inferior",
-        "IC_Total_Sup" = "IC Total (m³) Superior"),
+        "IC_ha_Inf" = "IC (m3/ha) Inferior" ,
+        "IC_ha_Sup" = "IC (m3/ha) Superior",
+        "IC_Total_inf" = "IC Total (m3) inferior",
+        "IC_Total_Sup" = "IC Total (m3) Superior"),
       warn_missing = F)
   
   
@@ -877,7 +905,7 @@ ace <- function(df, area_estrato, area_parcela, VCC, grupos, idade, alpha = 0.05
   
 }
 
-as_diffs <- function(df, area_total, area_parcela, VCC, idade, grupos, alpha = 0.05, Erro = 10, casas_decimais=4, tidy=T ) {
+as_diffs <- function(df, VCC, area_parcela, area_total, idade, grupos, alpha = 0.05, Erro = 10, casas_decimais=4, tidy=T ) {
   
   suppressPackageStartupMessages(require(dplyr))
   require(tidyr)
@@ -937,12 +965,12 @@ as_diffs <- function(df, area_total, area_parcela, VCC, idade, grupos, alpha = 0
   
   x <- x_ %>% 
     plyr::rename(c( "idade"        = "Idade (meses)"                  , 
-                    "n"            = "Numero de Parcelas (n)"         ,
-                    "N"            = "Numero de Parcelas cabiveis (N)", 
+                    "n"            = "Numero de amostras (n)"         ,
+                    "N"            = "Numero de amostras cabiveis (N)", 
                     "CV"           = "Coeficiente de Variancia (CV)"  ,
                     "t"            = "t-student"                      ,
-                    "t_rec"        = "t recalculado"                  ,
-                    "n_recalc"     = "n recalculado"                  ,
+                    "t_rec"        = "t-student recalculado"          ,
+                    "n_recalc"     = "Numero de amostras referente ao erro admitido",
                     "Y"            = "Media geral (Y)"                ,
                     "Sy"           = "Erro-Padrao da Media (Sy)"      ,
                     "Erroabs"      = "Erro Absoluto"                  ,
@@ -2091,29 +2119,6 @@ shinyServer(function(input, output, session) {
         placeholder = 'selecione uma coluna abaixo'#,
         #onInitialize = I('function() { this.setValue(""); }')
       ) # options
-    ),
-    
-    selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
-      'area_parcelanew', # Id
-      "Selecione a coluna da área da parcela (m²):", # nome que sera mostrado na UI
-      choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
-      selected = area_parcela_names,
-      options = list(
-        placeholder = 'selecione uma coluna abaixo'#,
-        # onInitialize = I('function() { this.setValue(""); }')
-      ) # options
-    ),
-    
-    selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
-      'gruposnew', # Id
-      "selecione as variáveis pivô:", # nome que sera mostrado na UI
-      choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
-      multiple = TRUE,
-      selected = grupos_names,
-      options = list(
-        placeholder = 'selecione uma coluna abaixo'#,
-        #onInitialize = I('function() { this.setValue(""); }')
-      ) # options
     )
     
    
@@ -2124,31 +2129,53 @@ shinyServer(function(input, output, session) {
  
   output$tot_parc_ui2 <- renderUI({
     
-    dados <- rawData()
+    data <- rawData()
     
     list(
+
+
+      switch(input$area_radio_new,
+             "Manualmente" =  numericInput("area_parcelanew", 
+                                           label = "Insira o valor da área da parcela (m²):",
+                                           value = 10000),
+             
+             "Lista de colunas" = selectizeInput("area_parcelanew",
+                                                 label = "Selecione a coluna da área da parcela (m²):",
+                                                 choices = names(data),
+                                                 options = list(
+                                                   placeholder = 'Selecione uma coluna abaixo:',
+                                                   onInitialize = I('function() { this.setValue(""); }')
+                                                 ) # options    
+             )# selectize
+      ),
       
-      output$selec_rotuloNIagreg <- renderUI({
-        
-        data <- rawData()
-        
-        switch(input$area_tot_radio_new,
-               "Manualmente" =  numericInput("area_totalnew", 
-                                         label = "Insira o valor da área total (ha):",
-                                         value = 50),
-               
-               "Lista de colunas" = selectizeInput("area_totalnew",
-                                                    label = "Rotular:",
-                                                    choices = names(data),
-                                                    options = list(
-                                                      placeholder = 'Selecione uma coluna abaixo:',
-                                                      onInitialize = I('function() { this.setValue(""); }')
-                                                    ) # options    
-               )# selectize
-        )
-        
-        
-      }),
+      switch(input$area_radio_new,
+             "Manualmente" =  numericInput("area_totalnew", 
+                                           label = "Insira o valor da área total (ha):",
+                                           value = 50),
+             
+             "Lista de colunas" = selectizeInput("area_totalnew",
+                                                 label = "Selecione a coluna da área total (ha)",
+                                                 choices = names(data),
+                                                 options = list(
+                                                   placeholder = 'Selecione uma coluna abaixo:',
+                                                   onInitialize = I('function() { this.setValue(""); }')
+                                                 ) # options    
+             )# selectize
+      ),
+
+      
+      selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
+        'gruposnew', # Id
+        "selecione as variáveis pivô:", # nome que sera mostrado na UI
+        choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
+        multiple = TRUE,
+        selected = grupos_names,
+        options = list(
+          placeholder = 'selecione uma coluna abaixo'#,
+          #onInitialize = I('function() { this.setValue(""); }')
+        ) # options
+      ),
       
       
       h3("Variaveis opcionais:"),
@@ -2167,7 +2194,7 @@ shinyServer(function(input, output, session) {
       
       selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
         'VSCnew', # Id
-        "selecione a coluna do volume com casca (m³):", # nome que sera mostrado na UI
+        "selecione a coluna do volume sem casca (m³):", # nome que sera mostrado na UI
         choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
         # selected = VSC_names,
         options = list(
@@ -2204,8 +2231,7 @@ shinyServer(function(input, output, session) {
     }
     
   })
-  
-  
+
       # ACS ####
   
   # funcao acs aplicada em invData
@@ -2233,36 +2259,14 @@ shinyServer(function(input, output, session) {
   
   # UI: as opcoes (choices) sao os nomes de invData
   
-  output$acs_ui <- renderUI({
+  output$acs_ui1 <- renderUI({
     
     data <- invData()
   
     list(
     
     h3("Amostragem Casual Simples"),
-      
-    selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
-      'area_totalacs', # Id
-      "Selecione a coluna da área total (ha):", # nome que sera mostrado na UI
-      choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
-      selected = area_total_names,     
-      options = list(
-        placeholder = 'selecione uma coluna abaixo'#,
-        #onInitialize = I('function() { this.setValue(""); }')
-      ) # options
-    ),
-    
-    selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
-      'area_parcelaacs', # Id
-      "Selecione a coluna da área da parcela (m²):", # nome que sera mostrado na UI
-      choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
-      selected = area_parcela_names,     
-      options = list(
-        placeholder = 'selecione uma coluna abaixo'#,
-        #onInitialize = I('function() { this.setValue(""); }')
-      ) # options
-    ),
-    
+
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       'VCCacs', # Id
       "Selecione a coluna do volume (m³):", # nome que sera mostrado na UI
@@ -2272,67 +2276,107 @@ shinyServer(function(input, output, session) {
         placeholder = 'selecione uma coluna abaixo'#,
         # onInitialize = I('function() { this.setValue(""); }')
       ) # options
-    ),
+    )
     
-    h4("Variaveis opcionais:"),
+    )
+  })
+  output$acs_ui2 <- renderUI({
     
-    selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
-      'idadeacs', # Id
-      "Selecione a coluna da idade:", # nome que sera mostrado na UI
-      choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
-      #selected = idade_names,     
-      options = list(
-        placeholder = 'selecione uma coluna abaixo',
-        onInitialize = I('function() { this.setValue(""); }')
-      ) # options
-    ),
+    data <- invData()
     
-    selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
-      'gruposacs', # Id
-      "Selecione as variáveis pivô:", # nome que sera mostrado na UI
-      choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
-      multiple = TRUE,  # permite mais de uma opcao ser selecionada
-      selected = NULL,     
-      options = list(
-        placeholder = 'Selecione as variaveis abaixo',
-        onInitialize = I('function() { this.setValue(""); }')
-      ) # options
-    ),
-    
-    sliderInput("cdacs", 
-                label = "Selecione o nº de casas decimais:", 
-                min = 0, 
-                max = 10, 
-                value = 4,
-                step = 1),
-    
-    sliderInput("alphaacs", 
-                label = "Selecione o nível de significância:", 
-                min = 0.01, 
-                max = 0.10, 
-                value = 0.05,
-                step = 0.01),
-    
-    sliderInput("erroacs", 
-                label = "Selecione o erro admitido (%):", 
-                min = 1, 
-                max = 20, 
-                value = 10,
-                step = 1),
-    
-    radioButtons(
-      inputId='popacs', # Id
-      label='Considerar a população infinita ou finita?', # nome que sera mostrado na UI
-      choices=c(Infinita="inf", Finita="fin"), # opcoes e seus nomes
-      selected="inf"
-    ),
-    
-    radioButtons( # esta da ao usuario opcoes para clicar. Apenas uma e selecionada
-      inputId="tidyacs",  #Id
-      label='Selecione o arranjo da tabela:', # nome que sera mostrado na UI
-      choices=c(Vertical = T, Horizontal = F), # opcoes e seus nomes
-      selected=T) # valor que sera selecionado inicialmente
-    
+    list(
+      
+      switch(input$area_radio_acs,
+             "Manualmente" =  numericInput("area_parcelaacs", 
+                                           label = "Insira o valor da área da parcela (m²):",
+                                           value = 10000),
+             
+             "Lista de colunas" = selectizeInput("area_parcelaacs",
+                                                 label = "Selecione a coluna da área da parcela (m²):",
+                                                 choices = names(data),
+                                                 selected = area_parcela_names,     
+                                                 options = list(
+                                                   placeholder = 'Selecione uma coluna abaixo:'#,
+                                                   #onInitialize = I('function() { this.setValue(""); }')
+                                                 ) # options    
+             )# selectize
+      ),
+      
+      switch(input$area_radio_acs,
+             "Manualmente" =  numericInput("area_totalacs", 
+                                           label = "Insira o valor da área total (ha):",
+                                           value = 50),
+             
+             "Lista de colunas" = selectizeInput("area_totalacs",
+                                                 label = "Selecione a coluna da área total (ha):",
+                                                 choices = names(data),
+                                                 selected = area_total_names,     
+                                                 options = list(
+                                                   placeholder = 'Selecione uma coluna abaixo:'#,
+                                                 #  onInitialize = I('function() { this.setValue(""); }')
+                                                 ) # options    
+             )# selectize
+      ),
+      
+      h4("Variaveis opcionais:"),
+      
+      selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
+        'idadeacs', # Id
+        "Selecione a coluna da idade:", # nome que sera mostrado na UI
+        choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
+        #selected = idade_names,     
+        options = list(
+          placeholder = 'selecione uma coluna abaixo',
+          onInitialize = I('function() { this.setValue(""); }')
+        ) # options
+      ),
+      
+      selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
+        'gruposacs', # Id
+        "Selecione as variáveis pivô:", # nome que sera mostrado na UI
+        choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
+        multiple = TRUE,  # permite mais de uma opcao ser selecionada
+        selected = NULL,     
+        options = list(
+          placeholder = 'Selecione as variaveis abaixo',
+          onInitialize = I('function() { this.setValue(""); }')
+        ) # options
+      ),
+      
+      sliderInput("erroacs", 
+                  label = "Selecione o erro admitido (%):", 
+                  min = 1, 
+                  max = 20, 
+                  value = 10,
+                  step = 1),
+      
+      sliderInput("alphaacs", 
+                  label = "Selecione o nível de significância:", 
+                  min = 0.01, 
+                  max = 0.10, 
+                  value = 0.05,
+                  step = 0.01),
+      
+      sliderInput("cdacs", 
+                  label = "Selecione o nº de casas decimais:", 
+                  min = 0, 
+                  max = 10, 
+                  value = 4,
+                  step = 1),
+      
+      radioButtons(
+        inputId='popacs', # Id
+        label='Considerar a população infinita ou finita?', # nome que sera mostrado na UI
+        choices=c(Infinita="inf", Finita="fin"), # opcoes e seus nomes
+        selected="inf"
+      ),
+      
+      radioButtons( # esta da ao usuario opcoes para clicar. Apenas uma e selecionada
+        inputId="tidyacs",  #Id
+        label='Selecione o arranjo da tabela:', # nome que sera mostrado na UI
+        choices=c(Vertical = T, Horizontal = F), # opcoes e seus nomes
+        selected=T) # valor que sera selecionado inicialmente
+      
     )
   })
   
@@ -2363,10 +2407,10 @@ shinyServer(function(input, output, session) {
       dados <- invData()
       
       x <- ace(df             = dados, 
-               area_estrato   = input$area_estratoace, 
-               area_parcela   = input$area_parcelaace, 
                VCC            = input$VCCace, 
                grupos         = input$gruposace, 
+               area_parcela   = input$area_parcelaace, 
+               area_estrato   = input$area_estratoace, 
                idade          = input$idadeace, 
                alpha          = input$alphaace, 
                Erro           = input$erroace, 
@@ -2386,10 +2430,10 @@ shinyServer(function(input, output, session) {
       dados <- invData()
       
       x <- ace(df = dados, 
-               area_estrato   = input$area_estratoace, 
-               area_parcela   = input$area_parcelaace , 
                VCC            = input$VCCace, 
                grupos         = input$gruposace, 
+               area_parcela   = input$area_parcelaace , 
+               area_estrato   = input$area_estratoace, 
                idade          = input$idadeace, 
                alpha          = input$alphaace, 
                Erro           = input$erroace, 
@@ -2411,12 +2455,12 @@ shinyServer(function(input, output, session) {
     list(
     
     h3("Amostragem Casual Estratificada"),
-      
-    selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
-      'area_estratoace', # Id
-      "Selecione a coluna da área total (ha):", # nome que sera mostrado na UI
+ 
+       selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
+      'VCCace', # Id
+      "Selecione a coluna do volume (m³):", # nome que sera mostrado na UI
       choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
-      selected = area_total_names,     
+      selected = VCC_names,     
       options = list(
         placeholder = 'selecione uma coluna abaixo'#,
         # onInitialize = I('function() { this.setValue(""); }')
@@ -2435,10 +2479,10 @@ shinyServer(function(input, output, session) {
     ),
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
-      'VCCace', # Id
-      "Selecione a coluna do volume (m³):", # nome que sera mostrado na UI
+      'area_estratoace', # Id
+      "Selecione a coluna da área total (ha):", # nome que sera mostrado na UI
       choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
-      selected = VCC_names,     
+      selected = area_total_names,     
       options = list(
         placeholder = 'selecione uma coluna abaixo'#,
         # onInitialize = I('function() { this.setValue(""); }')
@@ -2469,12 +2513,13 @@ shinyServer(function(input, output, session) {
         onInitialize = I('function() { this.setValue(""); }')
       ) # options
     ),
+
     
-    sliderInput("cdace", 
-                label = "Selecione o nº de casas decimais:", 
-                min = 0, 
-                max = 10, 
-                value = 4,
+    sliderInput("erroace", 
+                label = "Selecione o erro admitido (%):", 
+                min = 1, 
+                max = 20, 
+                value = 10,
                 step = 1),
     
     sliderInput("alphaace", 
@@ -2484,11 +2529,11 @@ shinyServer(function(input, output, session) {
                 value = 0.05,
                 step = 0.01),
     
-    sliderInput("erroace", 
-                label = "Selecione o erro admitido (%):", 
-                min = 1, 
-                max = 20, 
-                value = 10,
+    sliderInput("cdace", 
+                label = "Selecione o nº de casas decimais:", 
+                min = 0, 
+                max = 10, 
+                value = 4,
                 step = 1),
     
     radioButtons(
@@ -2568,7 +2613,7 @@ shinyServer(function(input, output, session) {
   
   # UI: as opcoes (choices) sao os nomes de invData
   
-  output$as_ui <- renderUI({
+  output$as_ui1 <- renderUI({
     
     data <- invData()
    
@@ -2577,28 +2622,6 @@ shinyServer(function(input, output, session) {
     h3("Amostragem Sistematica"),
     
     helpText("Utiliza-se o método das diferenças sucessivas, portanto, assume-se que os dados estão organizados de forma ordenada."),
-      
-    selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
-      'area_totalas', # Id
-      "Selecione a coluna da área total (ha):", # nome que sera mostrado na UI
-      choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
-      selected = area_total_names,     
-      options = list(
-        placeholder = 'selecione uma coluna abaixo'#,
-        # onInitialize = I('function() { this.setValue(""); }')
-      ) # options
-    ),
-    
-    selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
-      'area_parcelaas', # Id
-      "Selecione a coluna da área da parcela (m²):", # nome que sera mostrado na UI
-      choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
-      selected = area_parcela_names,     
-      options = list(
-        placeholder = 'selecione uma coluna abaixo'#,
-        #onInitialize = I('function() { this.setValue(""); }')
-      ) # options
-    ),
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       'VCCas', # Id
@@ -2609,60 +2632,101 @@ shinyServer(function(input, output, session) {
         placeholder = 'selecione uma coluna abaixo'#,
         # onInitialize = I('function() { this.setValue(""); }')
       ) # options
-    ),
+    )
     
-    h4("Variaveis opcionais:"),
+    )
+  })
+  output$as_ui2 <- renderUI({
     
-    selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
-      'idadeas', # Id
-      "Selecione a coluna da idade:", # nome que sera mostrado na UI
-      choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
-      #selected = idade_names,     
-      options = list(
-        placeholder = 'selecione uma coluna abaixo',
-        onInitialize = I('function() { this.setValue(""); }')
-      ) # options
-    ),
+    data <- invData()
     
-    selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
-      'gruposas', # Id
-      "Selecione as variáveis pivô:", # nome que sera mostrado na UI
-      choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
-      multiple = TRUE,  # permite mais de uma opcao ser selecionada
-      options = list(
-        placeholder = 'Selecione as variaveis abaixo',
-        onInitialize = I('function() { this.setValue(""); }')
-      ) # options
-    ),
-    
-    sliderInput("cdas", 
-                label = "Selecione o nº de casas decimais:", 
-                min = 0, 
-                max = 10, 
-                value = 4,
-                step = 1),
-    
-    sliderInput("alphaas", 
-                label = "Selecione o nível de significância:", 
-                min = 0.01, 
-                max = 0.10, 
-                value = 0.05,
-                step = 0.01),
-    
-    sliderInput("erroas", 
-                label = "Selecione o erro admitido (%):", 
-                min = 1, 
-                max = 20, 
-                value = 10,
-                step = 1),
-    
-    
-    radioButtons( # esta da ao usuario opcoes para clicar. Apenas uma e selecionada
-      inputId="tidyas",  #Id
-      label='Selecione o arranjo da tabela:', # nome que sera mostrado na UI
-      choices=c(Vertical = T, Horizontal = F), # opcoes e seus nomes
-      selected=T)
-
+    list(
+      
+      
+      switch(input$area_radio_as,
+             "Manualmente" =  numericInput("area_parcelaas", 
+                                           label = "Insira o valor da área da parcela (m²):",
+                                           value = 10000),
+             
+             "Lista de colunas" = selectizeInput("area_parcelaas",
+                                                 label = "Selecione a coluna da área da parcela (m²):",
+                                                 choices = names(data),
+                                                 selected = area_parcela_names,     
+                                                 options = list(
+                                                   placeholder = 'Selecione uma coluna abaixo:'#,
+                                                   #onInitialize = I('function() { this.setValue(""); }')
+                                                 ) # options    
+             )# selectize
+      ),
+      
+      switch(input$area_radio_as,
+             "Manualmente" =  numericInput("area_totalas", 
+                                           label = "Insira o valor da área total (ha):",
+                                           value = 50),
+             
+             "Lista de colunas" = selectizeInput("area_totalas",
+                                                 label = "Selecione a coluna da área total (ha):",
+                                                 choices = names(data),
+                                                 selected = area_total_names,     
+                                                 options = list(
+                                                   placeholder = 'Selecione uma coluna abaixo:'#,
+                                                   #  onInitialize = I('function() { this.setValue(""); }')
+                                                 ) # options    
+             )# selectize
+      ),
+      
+      
+      h4("Variaveis opcionais:"),
+      
+      selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
+        'idadeas', # Id
+        "Selecione a coluna da idade:", # nome que sera mostrado na UI
+        choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
+        #selected = idade_names,     
+        options = list(
+          placeholder = 'selecione uma coluna abaixo',
+          onInitialize = I('function() { this.setValue(""); }')
+        ) # options
+      ),
+      
+      selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
+        'gruposas', # Id
+        "Selecione as variáveis pivô:", # nome que sera mostrado na UI
+        choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
+        multiple = TRUE,  # permite mais de uma opcao ser selecionada
+        options = list(
+          placeholder = 'Selecione as variaveis abaixo',
+          onInitialize = I('function() { this.setValue(""); }')
+        ) # options
+      ),
+      
+      sliderInput("erroas", 
+                  label = "Selecione o erro admitido (%):", 
+                  min = 1, 
+                  max = 20, 
+                  value = 10,
+                  step = 1),
+      
+      sliderInput("alphaas", 
+                  label = "Selecione o nível de significância:", 
+                  min = 0.01, 
+                  max = 0.10, 
+                  value = 0.05,
+                  step = 0.01),
+      
+      sliderInput("cdas", 
+                  label = "Selecione o nº de casas decimais:", 
+                  min = 0, 
+                  max = 10, 
+                  value = 4,
+                  step = 1),
+      
+      radioButtons( # esta da ao usuario opcoes para clicar. Apenas uma e selecionada
+        inputId="tidyas",  #Id
+        label='Selecione o arranjo da tabela:', # nome que sera mostrado na UI
+        choices=c(Vertical = T, Horizontal = F), # opcoes e seus nomes
+        selected=T)
+      
     )
   })
   

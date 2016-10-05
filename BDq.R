@@ -20,7 +20,7 @@ bdq.meyer = function(data, col.parcelas, col.dap, area.parcela, intervalo.classe
   data[, "CentroClasse"] = data[,"Classe"] * INTERVALO.CLASSE - (INTERVALO.CLASSE / 2)
   
   freq = data.frame(table(data[,"Classe"]))
-  DD = data.frame(Classe = as.numeric(freq[,1]))
+  DD = data.frame(Classe = as.numeric(as.character(freq[,1])) ) # correcao fator para numerico
   DD$CentroClasse = DD$Classe * INTERVALO.CLASSE - (INTERVALO.CLASSE / 2)
   DD$NumIndv = freq[,2]
   # Alterei aqui para a area poder ser inserida em m2
