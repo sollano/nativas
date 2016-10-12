@@ -14,7 +14,6 @@ library(markdown)
 
 ex <- read.csv("examples/Inventory_exemplo.csv")
 
-
 # Funcoes Nativas ####
 
 agregacao = function(data, col.especies, col.parcelas, rotulo.NI = "NI"){
@@ -905,7 +904,7 @@ ace <- function(df,VCC, area_parcela, area_estrato, grupos, idade, alpha = 0.05,
   
 }
 
-as_diffs <- function(df, VCC, area_parcela, area_total, idade, grupos, alpha = 0.05, Erro = 10, casas_decimais=4, tidy=T ) {
+as_diffs <- function(df, VCC, area_parcela, area_total,  idade, grupos, alpha = 0.05, Erro = 10, casas_decimais=4, tidy=T ) {
   
   suppressPackageStartupMessages(require(dplyr))
   require(tidyr)
@@ -944,6 +943,8 @@ as_diffs <- function(df, VCC, area_parcela, area_total, idade, grupos, alpha = 0
             interp(~ mean(area_total) / ( mean(area_parcela)/10000 ), area_total = as.name(area_total), area_parcela = as.name(area_parcela)  ),
             interp(~ sd(VCC) / mean(VCC) * 100, VCC = as.name(VCC) ),
             ~ qt(alpha/2, df = n-1, lower.tail = FALSE),
+            ~ qt(alpha/2, df = ceiling( t^2 * CV^2 / Erro^2) - 1, lower.tail = FALSE)  ,
+            ~ ceiling( t_rec ^2 * CV^2 / Erro^2 ) ,
             interp(~ mean(VCC, na.rm=T), VCC = as.name(VCC) ),
             interp(~ sqrt( (sum(diff(VCC)^2) / (2 * n * (n-1) ) ) * ((N-n)/N) ) , VCC = as.name(VCC), n = as.name("n"), N = as.name("N") ),
             ~ Sy * t ,
@@ -955,7 +956,7 @@ as_diffs <- function(df, VCC, area_parcela, area_total, idade, grupos, alpha = 0
             ~ Yhat - Erro_Total,
             ~ Yhat + Erro_Total
           ), 
-          nm=c("idade", "n","N", "CV","t","Y","Sy","Erroabs" ,"Erroperc","Yhat", "Erro_Total","IC_ha_Inf" ,"IC_ha_Sup","IC_Total_inf","IC_Total_Sup")
+          nm=c("idade", "n","N", "CV","t","t_rec","n_recalc", "Y", "Sy", "Erroabs","Erroperc","Yhat", "Erro_Total","IC_ha_Inf" ,"IC_ha_Sup","IC_Total_inf","IC_Total_Sup")
         ) 
     ) %>%
     na_if(0) %>% # substitui 0 por NA
@@ -965,11 +966,11 @@ as_diffs <- function(df, VCC, area_parcela, area_total, idade, grupos, alpha = 0
   
   x <- x_ %>% 
     plyr::rename(c( "idade"        = "Idade (meses)"                  , 
-                    "n"            = "Numero de amostras (n)"         ,
-                    "N"            = "Numero de amostras cabiveis (N)", 
+                    "n"            = "Numero de Parcelas (n)"         ,
+                    "N"            = "Numero de Parcelas cabiveis (N)", 
                     "CV"           = "Coeficiente de Variancia (CV)"  ,
                     "t"            = "t-student"                      ,
-                    "t_rec"        = "t-student recalculado"          ,
+                    "t_rec"        = "t-student recalculado"                  ,
                     "n_recalc"     = "Numero de amostras referente ao erro admitido",
                     "Y"            = "Media geral (Y)"                ,
                     "Sy"           = "Erro-Padrao da Media (Sy)"      ,
@@ -977,10 +978,10 @@ as_diffs <- function(df, VCC, area_parcela, area_total, idade, grupos, alpha = 0
                     "Erroperc"     = "Erro Relativo (%)"              ,
                     "Yhat"         = "Volume total estimado (Yhat)"   , 
                     "Erro_Total"   = "Erro Total"                     ,
-                    "IC_ha_Inf"    = "IC (m³/ha) Inferior"            ,
-                    "IC_ha_Sup"    = "IC (m³/ha) Superior"            ,
-                    "IC_Total_inf" = "IC Total (m³) inferior"         ,
-                    "IC_Total_Sup" = "IC Total (m³) Superior")        , 
+                    "IC_ha_Inf"    = "IC (m3/ha) Inferior"            ,
+                    "IC_ha_Sup"    = "IC (m3/ha) Superior"            ,
+                    "IC_Total_inf" = "IC Total (m3) inferior"         ,
+                    "IC_Total_Sup" = "IC Total (m3) Superior")        , 
                  warn_missing = F) # nao gera erro mesmo quando se renomeia variaveis inexistentes
   
   
@@ -1041,7 +1042,7 @@ estratos_names <- c("TALHAO", "Talhao", "talhao","COD_TALHAO","Cod_Talhao","cod_
 
 shinyServer(function(input, output, session) {
   
-  
+
   # Importar os dados ####
 
   
@@ -1111,7 +1112,11 @@ shinyServer(function(input, output, session) {
     else if(input$excel == F)
     {
       raw_data <- read.csv(inFile$datapath, header=TRUE, sep=input$sep, dec=input$dec,quote='"')
-    } else {raw_data <- read.xlsx(inFile$datapath, 1)  }
+    } else {
+      file.copy(inFile$datapath,
+                      paste(inFile$datapath, "xlsx", sep="."));
+      raw_data <- readxl::read_excel(paste(inFile$datapath, "xlsx", sep="."), 1) 
+      }
     
     # Carregamos o arquivo em um objeto
     
