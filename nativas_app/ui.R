@@ -287,13 +287,6 @@ shinyUI(
                        
                        uiOutput("selec_area.parcelaBDq"),
                        
-                       sliderInput("intervalo.classeBDq", 
-                                   label = "Selecione um intervalo de classe:", 
-                                   min = 0, 
-                                   max = 10, 
-                                   value = 5,
-                                   step = 1),
-                       
                        sliderInput("min.dapBDq", 
                                    label = "Selecione o DAP mínimo:", 
                                    min = 0, 
@@ -301,6 +294,13 @@ shinyUI(
                                    value = 5,
                                    step = 1),
                        
+                       sliderInput("intervalo.classeBDq", 
+                                   label = "Selecione um intervalo de classe:", 
+                                   min = 0, 
+                                   max = 10, 
+                                   value = 5,
+                                   step = 1),
+
                        sliderInput("i.licourtBDq", 
                                    label = "Selecione um valor de quociente de Licourt:", 
                                    min = 0, 
