@@ -25,4 +25,5 @@ SOUZA, A. L. D; SOARES, C. P. B. Florestas Nativas: estrutura, dinâmica e manej
 <a href="http://www.ufvjm.edu.br/"><img src="www/UFVJM_logo2.png" width="50" height="50"/></a>
 <img src="www/EF_logo.png" width="50" height="50" />
 <a href="http://gorgens.wixsite.com/treelab"><img src="www/LAB_logo.png" width="50" height="50" /></a>
+<a href="http://marcioromarco.webnode.com/"><img src="www/GEMMF_logo.png" width="90" height="50"/> </a>
 </div>
