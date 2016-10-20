@@ -1,8 +1,10 @@
 
 shinyUI(
+  
+  tagList(tags$style(HTML(".irs-single, .irs-bar-edge, .irs-bar{background: #00a90a}")), # this is actually .css; this changes the color for the sliders
   navbarPage("Inventário de Nativas (BETA)",
              
-             theme = "green_yeti.css",
+             theme = "green_yeti2.css",
             # theme = "green.css", # seleciona um tema contido na pasta www
             # theme = shinythemes::shinytheme("paper"), # seleciona um tema utilizando pacote
              
@@ -559,4 +561,5 @@ shinyUI(
   
              # final da UI  ####    
   )# navbarPage
+  )#tagList
 ) # ShinyUI

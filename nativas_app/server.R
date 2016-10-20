@@ -1,6 +1,7 @@
 library(shinythemes)
 library(shiny)
 library(DT)
+library(formattable)
 #library(plyr)
 library(tidyr)
 library(dplyr)
@@ -727,7 +728,7 @@ ace <- function(df,VCC, area_parcela, area_estrato, grupos, idade, alpha = 0.05,
     estrato_name <- grupos[length(grupos)]
     estratos <- levels(factor(df[[estrato_name]]))
     
-    if(!all.equal(length(estratos), length(area_estrato))){stop("numero de estratos e número de áreas de estrato não coincidem")}
+    if(!all.equal(length(estratos), length(area_estrato))){stop("numero de estratos e número de areas de estrato nao coincidem")}
     
     
     tab_estratos <- data.frame( estratos, area_estrato)
@@ -742,17 +743,27 @@ ace <- function(df,VCC, area_parcela, area_estrato, grupos, idade, alpha = 0.05,
   }
   
   
-  #if(!all.equal(length(levels(factor(df[[grupos[length(grupos)]]]))) , length(levels(factor(df[[area_estrato]])))  ) ){stop("numero de estratos e número de áreas de estrato não coincidem")}
+  #if(!all.equal(length(levels(factor(df[[grupos[length(grupos)]]]))) , length(levels(factor(df[[area_estrato]])))  ) ){stop("numero de estratos e número de areas de estrato nao coincidem")}
   
   
-  x_ <- df %>%
+  aux <- df %>%
     na_if(0) %>%
     group_by_(.dots = grupos) %>%
     summarise_(.dots = setNames( list( interp( ~ mean(area_estrato) / (mean(area_parcela)/10000), area_estrato = as.name(area_estrato), area_parcela = as.name(area_parcela) ) ), nm="Nj" ) ) %>%
-    summarise(N  = sum(Nj) ) %>% 
-    ungroup %>%
-    select(N) %>%
-    cbind(data.frame(df),.) %>% 
+    summarise(N  = sum(Nj) )
+  
+  if(nrow(aux) == 1) {
+    
+    x_ <- cbind(data.frame(df),N = aux$N)
+    
+  }else{
+    
+    x_ <- left_join(data.frame(df),aux)
+    
+  }
+  
+  
+  x_ <- x_ %>% 
     mutate_(.dots = setNames( list( interp( ~ area_estrato / ( area_parcela/10000 ), area_estrato = as.name(area_estrato), area_parcela = as.name(area_parcela) ) ), nm="Nj" ) ) %>%
     group_by_(.dots = grupos) %>%
     summarise_(.dots = 
@@ -773,7 +784,7 @@ ace <- function(df,VCC, area_parcela, area_estrato, grupos, idade, alpha = 0.05,
                    nm=c("IDADE", "nj", "Nj", "N", "Pj", "Eyj", "Eyj2", "Yj", "Pj_Sj2", "Pj_Sj", "Pj_Yj")
                  ) 
     ) %>%
-    ungroup %>%
+    # ungroup %>%
     mutate( EPj_Sj2  =   sum(Pj_Sj2), 
             EPj_Sj   =   sum(Pj_Sj), 
             Y        =   sum(Pj_Yj), # media estratificada (ponderada)     
@@ -875,7 +886,7 @@ ace <- function(df,VCC, area_parcela, area_estrato, grupos, idade, alpha = 0.05,
     x <-  x %>%
       gather_("Variaveis","value", vec1, factor_key=T) %>% 
       arrange_(grupos) %>% 
-      spread_(vec2,"value",sep="") %>%
+      spread_(vec2,"value",sep=" ") %>%
       group_by_(.dots=vec3)
     
     if(length(grupos)!=1 ){
@@ -1140,7 +1151,15 @@ shinyServer(function(input, output, session) {
     # salvamos a funcao newData, que contem o arquivo carregado pelo usuario em um objeto
     data <- rawData() 
     
-    datatable(data) # Criamos uma DT::datatable com base no objeto
+    datatable(data,
+              
+              options = list(
+                initComplete = JS(
+                  "function(settings, json) {",
+                  "$(this.api().table().header()).css({'background-color': '#00a90a', 'color': '#fff'});",
+                  "}")
+              )
+    ) # Criamos uma DT::datatable com base no objeto
     
     # Este arquivo e reativo, e ira se alterar caso o usuario
     # aperte o botao input$columns
@@ -1217,7 +1236,13 @@ shinyServer(function(input, output, session) {
       
       datatable( divdt,
                  options = list(searching = FALSE,
-                                paging=FALSE )  ) 
+                                paging=FALSE,
+                                initComplete = JS(
+                                  "function(settings, json) {",
+                                  "$(this.api().table().header()).css({'background-color': '#00a90a', 'color': '#fff'});",
+                                  "}")
+                 )   
+      ) 
     }
     
   }) 
@@ -1326,7 +1351,8 @@ shinyServer(function(input, output, session) {
   
   output$rb_slider_graphmsim1 <- renderUI({
     
-    validate(need(input$mainPanel_Indices == "id_msim1_graph", "" )  )
+    # precisa que o grafico seja selecionado na ui, caso contrario nao mostra nada
+    validate(need(input$mainPanel_Indices == "id_msim1_graph", "" )  ) 
     
    list( 
      
@@ -1346,8 +1372,8 @@ shinyServer(function(input, output, session) {
     
   })
   output$rb_slider_graphmsim2 <- renderUI({
-    
-    validate(need(input$mainPanel_Indices == "id_msim2_graph", "" )  )
+    # precisa que o grafico seja selecionado na ui, caso contrario nao mostra nada
+        validate(need(input$mainPanel_Indices == "id_msim2_graph", "" )  )
     
     list(  
       
@@ -1378,7 +1404,13 @@ shinyServer(function(input, output, session) {
       
       datatable( msimdt1,
                  options = list(searching = FALSE,
-                                paging=FALSE )  ) 
+                                paging=FALSE,
+                                initComplete = JS(
+                                  "function(settings, json) {",
+                                  "$(this.api().table().header()).css({'background-color': '#00a90a', 'color': '#fff'});",
+                                  "}")
+                 )   
+      ) 
     }
     
   }) 
@@ -1390,13 +1422,22 @@ shinyServer(function(input, output, session) {
       
       datatable( msimdt2,
                  options = list(searching = FALSE,
-                                paging=FALSE )  ) 
+                                paging=FALSE,
+                                initComplete = JS(
+                                  "function(settings, json) {",
+                                  "$(this.api().table().header()).css({'background-color': '#00a90a', 'color': '#fff'});",
+                                  "}")
+                 )   
+      ) 
     }
     
   }) 
   
   # graficos 
   msim1_graph <- reactive({
+    
+    #retornar vazio enquando input$rb_msim1_graph carrega (ele fica nulo quando carrega)
+    if(is.null(input$rb_msim1_graph)){return("")} 
     
     if(input$Loadmsim)
     {
@@ -1428,8 +1469,6 @@ shinyServer(function(input, output, session) {
   
   output$msim1_graph_ <- renderPlot({
     
-    
-      
     g <- msim1_graph()
     
     g
@@ -1437,6 +1476,9 @@ shinyServer(function(input, output, session) {
   })
 
   msim2_graph <- reactive({
+    
+    #retornar vazio enquando input$rb_msim1_graph carrega (ele fica nulo quando carrega)
+    if(is.null(input$rb_msim2_graph)){return("")} 
     
     if(input$Loadmsim)
     {
@@ -1619,7 +1661,12 @@ shinyServer(function(input, output, session) {
       
       datatable( psimdt,
                  options = list(searching = FALSE,
-                                paging=FALSE )  ) 
+                                paging=FALSE,
+                                initComplete = JS(
+                                  "function(settings, json) {",
+                                  "$(this.api().table().header()).css({'background-color': '#00a90a', 'color': '#fff'});",
+                                  "}")
+                 )  ) 
     }
     
   }) 
@@ -1709,7 +1756,12 @@ shinyServer(function(input, output, session) {
       
       datatable( agregdt,
                  options = list(searching = T,
-                                paging=T )  ) 
+                                paging=T,
+                                initComplete = JS(
+                                  "function(settings, json) {",
+                                  "$(this.api().table().header()).css({'background-color': '#00a90a', 'color': '#fff'});",
+                                  "}")
+                 )  ) 
     }
     
   }) 
@@ -1873,7 +1925,12 @@ shinyServer(function(input, output, session) {
       
       datatable( as.tbl(estrdt),
                  options = list(searching = T,
-                                paging=T )  ) 
+                                paging=T,
+                                initComplete = JS(
+                                  "function(settings, json) {",
+                                  "$(this.api().table().header()).css({'background-color': '#00a90a', 'color': '#fff'});",
+                                  "}")
+                 )  ) 
     }
     
   }) 
@@ -1987,7 +2044,12 @@ shinyServer(function(input, output, session) {
       
       datatable( as.data.frame(BDqdt),
                  options = list(searching = T,
-                                paging=T )  ) 
+                                paging=T,
+                                initComplete = JS(
+                                  "function(settings, json) {",
+                                  "$(this.api().table().header()).css({'background-color': '#00a90a', 'color': '#fff'});",
+                                  "}")
+                 )  ) 
     }
     
   }) 
@@ -1999,13 +2061,17 @@ shinyServer(function(input, output, session) {
 
       datatable(BDqdt,
                  options = list(searching = FALSE,
-                                paging=FALSE )  ) 
+                                paging=FALSE,
+                                initComplete = JS(
+                                  "function(settings, json) {",
+                                  "$(this.api().table().header()).css({'background-color': '#00a90a', 'color': '#fff'});",
+                                  "}")
+                 )  ) 
     }
     
   }) 
 
   # grafico
-  
   BDq_graph <- reactive({
     
     if(input$LoadBDq){
@@ -2023,7 +2089,7 @@ shinyServer(function(input, output, session) {
       g <-  ggplot(graph_bdq, aes(x = x, y = y) ) + 
         geom_bar(aes(fill = class), stat = "identity",position = "dodge") +
         labs(x = "Classe de diâmetro (cm)", y = "Número de indivíduos (ha)", fill = NULL) + 
-        scale_fill_manual(values =c("firebrick2", "cyan3") ) +
+        scale_fill_manual(values =c("#108e00", "cyan3","firebrick2") ) +
         theme_hc(base_size = 14) 
       #theme_igray(base_size = 14)
       
@@ -2106,7 +2172,7 @@ shinyServer(function(input, output, session) {
     
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       'HTnew', # Id
-      "Selecione a coluna da altura (cm):", # nome que sera mostrado na UI
+      "Selecione a coluna da altura (m):", # nome que sera mostrado na UI
       choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
       selected = HT_names,
       options = list(
@@ -2232,7 +2298,13 @@ shinyServer(function(input, output, session) {
     
     if(input$Loadnew)
     {
-      datatable(data) # Criamos uma DT::datatable com base no objeto
+      datatable(data,
+                options = list(initComplete = JS(
+                                 "function(settings, json) {",
+                                 "$(this.api().table().header()).css({'background-color': '#00a90a', 'color': '#fff'});",
+                                 "}")
+                )   
+      ) # Criamos uma DT::datatable com base no objeto
     }
     
   })
@@ -2392,12 +2464,33 @@ shinyServer(function(input, output, session) {
     
     if(input$Loadacs)
     {
-      datatable( acsdt,
-                 options = list(searching = FALSE,
-                                paging=FALSE
-                 )   
-                 
-      )
+      # converte em datatable        # cria formattable
+      as.datatable( formattable(acsdt, 
+                                list(    # colore a linha 6 da coluna dois de verde ou vemelho, se ela for menor ou maior que o numero da linha 1 coluna 2
+                                  area(row=6, col=2) ~  formatter("span", 
+                                                                  style = x ~ style(color = ifelse(x <= acsdt[1,2], "#108e00", "red"))) ,
+                                  # colore o erro estimado de verde ou vemelho, se ela for menor ou maior que o erro desejado
+                                  area(row=10, col=2) ~ formatter("span", 
+                                                                  style = x ~ style(color = ifelse(x <= input$erroacs, "#108e00", "red")))
+                                  
+                                  
+                                )#list
+      ), #formattable
+      # pre seleciona linhas
+      selection = list(mode = 'multiple', selected = c(6,10,15,16), target = 'row'),
+      options = list(searching = FALSE,
+                     paging=FALSE,
+                     initComplete = JS( # muda cor do cabecalho
+                       "function(settings, json) {",
+                       "$(this.api().table().header()).css({'background-color': '#00a90a', 'color': '#fff'});",
+                       "}")
+      ) 
+      
+      
+      
+      ) #as.datatable
+      
+      
     } 
     
   })
@@ -2564,9 +2657,14 @@ shinyServer(function(input, output, session) {
     
     if(input$Loadace)
     {
-      datatable( ace1dt,
+      datatable( ace1dt, # seleciona a linha 5 previamente
+                 selection = list(mode = 'multiple', selected = c(13,17,18,19), target = 'row'),
                  options = list(searching = FALSE,
-                                paging=FALSE
+                                paging=FALSE,
+                                initComplete = JS( # muda a cor do cabecalho
+                                  "function(settings, json) {",
+                                  "$(this.api().table().header()).css({'background-color': '#00a90a', 'color': '#fff'});",
+                                  "}")
                  )   
                  
       )
@@ -2581,12 +2679,33 @@ shinyServer(function(input, output, session) {
     
     if(input$Loadace)
     {
-      datatable( ace2dt,
-                 options = list(searching = FALSE,
-                                paging=FALSE
-                 )   
-                 
+      # converte em datatable        # cria formattable
+      as.datatable( formattable(ace2dt, 
+                                list(
+                                  # colore o erro estimado de verde ou vemelho, se ela for menor ou maior que o erro desejado
+                                  area(row=5, col=2) ~ formatter("span", 
+                                                                 style = x ~ style(color = ifelse(x <= input$erroace, "#108e00", "red")))
+                                  
+                                  
+                                )#list
+      ), #formattable
+      # pre seleciona linhas
+      selection = list(mode = 'multiple', selected = c(5,10,11), target = 'row'),
+      options = list(searching = FALSE,
+                     paging=FALSE,
+                     initComplete = JS( # muda cor do cabecalho
+                       "function(settings, json) {",
+                       "$(this.api().table().header()).css({'background-color': '#00a90a', 'color': '#fff'});",
+                       "}")
+      ) 
+      
+      
+      
       )
+      
+      
+      
+      
     } 
     
   })
@@ -2735,6 +2854,7 @@ shinyServer(function(input, output, session) {
     )
   })
   
+  
   # tabela as
   output$as <- renderDataTable({
     
@@ -2742,11 +2862,32 @@ shinyServer(function(input, output, session) {
     
     if(input$Loadas)
     {
-      datatable( asdt,
-                 options = list(searching = FALSE,
-                                paging=FALSE
-                 )   
-                 
+      
+      
+      # converte em datatable        # cria formattable
+      as.datatable( formattable(asdt, 
+                                list(    # colore a linha 6 da coluna dois de verde ou vemelho, se ela for menor ou maior que o numero da linha 1 coluna 2
+                                  area(row=6, col=2) ~  formatter("span", 
+                                                                  style = x ~ style(color = ifelse(x <= asdt[1,2], "#108e00", "red"))) ,
+                                  # colore o erro estimado de verde ou vemelho, se ela for menor ou maior que o erro desejado
+                                  area(row=10, col=2) ~ formatter("span", 
+                                                                  style = x ~ style(color = ifelse(x <= input$erroas, "#108e00", "red")))
+                                  
+                                  
+                                )#list
+      ), #formattable
+      # pre seleciona linhas
+      selection = list(mode = 'multiple', selected = c(6,10,15,16), target = 'row'),
+      options = list(searching = FALSE,
+                     paging=FALSE,
+                     initComplete = JS( # muda cor do cabecalho
+                       "function(settings, json) {",
+                       "$(this.api().table().header()).css({'background-color': '#00a90a', 'color': '#fff'});",
+                       "}")
+      ) 
+      
+      
+      
       )
     } 
     
@@ -2777,7 +2918,12 @@ shinyServer(function(input, output, session) {
     
     datatable( datadownload,
                options = list(searching = FALSE,
-                              paging=FALSE
+                              paging=FALSE,
+                              initComplete = JS(
+                                "function(settings, json) {",
+                                "$(this.api().table().header()).css({'background-color': '#00a90a', 'color': '#fff'});",
+                                "}")
+                              
                )  )
     
   }) 
