@@ -56,7 +56,7 @@ shinyUI(
                         
                         # Painel I. de diversidade ####
                         
-                        tabPanel("I. de diversidade",
+                        tabPanel("Índice de diversidade",
                                  sidebarLayout(
                                    
                                    sidebarPanel(
@@ -92,7 +92,7 @@ shinyUI(
                         
                         # Painel Matriz Similaridade ####
                         
-                        tabPanel("M. Similaridade", 
+                        tabPanel("Matriz de Similaridade", 
                                  sidebarLayout(
                                    
                                    sidebarPanel(
@@ -139,7 +139,7 @@ shinyUI(
                         
                         # Painel Pareado Similaridade ####
                         
-                        tabPanel("P. Similaridade",
+                        tabPanel("Pareado Similaridade",
                                  sidebarLayout(
                                    
                                    sidebarPanel(
@@ -179,7 +179,7 @@ shinyUI(
                         
                         
                         # Painel I. de agregacao ####
-                        tabPanel("I. de agregação",
+                        tabPanel("Índice de agregação",
                                  sidebarLayout(
                                    sidebarPanel(
                                      

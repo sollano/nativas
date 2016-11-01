@@ -1211,11 +1211,11 @@ shinyServer(function(input, output, session) {
     
     switch(input$CBdiv,
            "Manualmente" = textInput("rotutuloNIdiv", 
-                                     label = "Rotular:", 
+                                     label = "Código de indivíduo não indentificado:", 
                                      value = "NI"),
            
            "lista de especies" = selectizeInput("rotutuloNIdiv",
-                                                label = "Rotular:",
+                                                label = "Código de indivíduo não indentificado:",
                                                 choices = levels(as.factor(dados[,input$col.especiesdiv])),
                                                 options = list(
                                                   placeholder = 'Selecione uma espécie abaixo',
@@ -1331,11 +1331,11 @@ shinyServer(function(input, output, session) {
     
     switch(input$CBmsim,
            "Manualmente" = textInput("rotutuloNImsim", 
-                                     label = "Rotular:", 
+                                     label = "Código de indivíduo não indentificado:", 
                                      value = "NI"),
            
            "lista de especies" = selectizeInput("rotutuloNImsim",
-                                                label = "Rotular:",
+                                                label = "Código de indivíduo não indentificado:",
                                                 choices = levels(
                                                   as.factor(
                                                     dados[,input$col.especiesmsim])),
@@ -1634,11 +1634,11 @@ shinyServer(function(input, output, session) {
     
     switch(input$CBpsim,
            "Manualmente" = textInput("rotutuloNIpsim", 
-                                     label = "Rotular:", 
+                                     label = "Código de indivíduo não indentificado:", 
                                      value = "NI"),
            
            "lista de especies" = selectizeInput("rotutuloNIpsim",
-                                                label = "Rotular:",
+                                                label = "Código de indivíduo não indentificado:",
                                                 choices = levels(
                                                   as.factor(
                                                     dados[,input$col.especiespsim])),
@@ -1732,11 +1732,11 @@ shinyServer(function(input, output, session) {
     
     switch(input$CBagreg,
            "Manualmente" = textInput("rotutuloNIagreg", 
-                                   label = "Rotular:", 
+                                   label = "Código de indivíduo não indentificado:", 
                                    value = "NI"),
            
            "lista de especies" = selectizeInput("rotutuloNIagreg",
-                                                label = "Rotular:",
+                                                label = "Código de indivíduo não indentificado:",
                                                 choices = levels(as.factor(dados[,input$col.especiesagreg])),
                                                 options = list(
                                                   placeholder = 'Selecione uma espécie abaixo',
@@ -1866,11 +1866,11 @@ shinyServer(function(input, output, session) {
     
     switch(input$CBestr,
            "Manualmente" = textInput("rotutuloNIestr", 
-                                     label = "Rotular:", 
+                                     label = "Código de indivíduo não indentificado:", 
                                      value = "NI"),
            
            "lista de especies" = selectizeInput("rotutuloNIestr",
-                                                label = "Rotular:",
+                                                label = "Código de indivíduo não indentificado:",
                                                 choices = levels(as.factor(dados[,input$col.especiesestr])),
                                                 options = list(
                                                   placeholder = 'Selecione uma espécie abaixo',
