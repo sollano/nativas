@@ -1,13 +1,18 @@
 p.similaridade=function(x, y, rotuloNI = "NI", indice = "both"){
   
+  # converter rotulos NI (aplicativo)
+  if(is.null(rotuloNI)){rotuloNI <- "NI"}
+
   # Remover observações cuja espécie é desconhecida
-  semNI1 = x[x != rotuloNI]
+  # modifiquei para aceitar multiplas entradas
+  semNI1 = x[! x %in% rotuloNI]
   semNI1 = x[!is.na(x)]
   
   # Encontrar o número de espéciue que ocorrem na parcela
   a = length(unique(semNI1))
   
-  semNI2 = y[y != rotuloNI]
+  # modifiquei para aceitar multiplas entradas
+  semNI2 = y[! y %in% rotuloNI]
   
   b = length(unique(semNI2))
   
