@@ -6,8 +6,12 @@ agregacao = function(data, col.especies, col.parcelas, rotulo.NI = "NI"){
   # Remover NA
   data = data[!is.na(data[SPECIES]),]
   
+  # converter rotulos NI (aplicativo)
+  if(is.null(NI)){NI <- "NI"}
+
   # Remover NI
-  data = data[data[SPECIES] != NI,]
+  # modifiquei para aceitar multiplas entradas
+  data = data[! data[,SPECIES] %in% NI,]
   espList = levels(factor(data[,SPECIES]))
   
   # Constroi tabela de frequencia
