@@ -17,6 +17,203 @@ ex <- read.csv("examples/Inventory_exemplo.csv")
 
 # Funcoes Nativas ####
 
+diversidade = function(data, col.especies, col.parcelas, rotulo.NI = "NI", indice){
+  
+  # Remover NA
+  data <- data[!is.na(data[col.especies]),]
+  
+  # converter rotulos NI (aplicativo)
+  if(is.null(rotulo.NI)){rotulo.NI <- "NI"}
+  
+  # Remover NI (modifiquei para aceitar multiplas)
+  #semNI = data[ ! data[,col.especies] %in% rotulo.NI, col.especies]
+  semNI = data[ ! data %in% rotulo.NI ]
+  
+  ESPECIES <- semNI[col.especies]
+  
+  # Condicional: Se o usuario nao fornecer a variavel parcela,
+  # cria-se um vetor vazio com o mesmo numero de linhas chamado parcela
+  if(missing(col.parcelas) || is.null(col.parcelas) || is.na(col.parcelas) || col.parcelas == ""){
+    
+    PARCELAS <- vector("character", nrow(ESPECIES) )
+    
+    # transformar argumento vazio em NA, para evitar erros
+    col.parcelas <- NA
+    
+  }else{ # caso contrario, cria-se um objeto que contem a variavel parcela
+    PARCELAS <- semNI[col.parcelas]
+  }
+  
+  # Com a funcao by calcula-se os indices por PARCELAS;
+  # caso col.parcelas nao tenha sido fornecido, PARCELAS sera um vetor vazio,
+  # e o calculo sera feito considerando todo o dado.
+  tab_indices <- by(ESPECIES, PARCELAS , function(x){
+    
+    tableFreq = table(x)
+    tableP = data.frame(tableFreq)
+    names(tableP) = c("especie", "freq")
+    
+    # Calcula número de indivíduos na amostra
+    #N = length(semNI)
+    N = sum(tableP$freq)
+    
+    # Calcula a proporção de cada espécie
+    tableP$p = tableP$freq / N
+    
+    # Calcula o log da proporção de cada espécie
+    tableP$lnp = log(tableP$p)
+    tableP[tableP$lnp  == "-Inf", "lnp"] = 0
+    
+    # Número de espécies amostradas
+    Sesp = length(tableP[tableP$freq > 0, "especie"])
+    
+    # Calcula Shannon
+    H = round(- sum(tableP$p * tableP$lnp), 2)
+    
+    #Calcula Simpson
+    S = round(1 - (sum(tableP$freq*(tableP$freq - 1))/(N*(N-1))), 2)
+    
+    # Diversidade Máxima
+    Hmax = round(log(length(tableP$freq[tableP$freq>0])), 2)
+    
+    # Equabilidade de Pielou
+    J = round(H / Hmax, 2)
+    
+    # Coeficiente de mistura de Jentsch
+    QM = round(Sesp / N, 2)
+    
+    tab_final <- data.frame(Shannon = H, Simpson = S, EqMaxima = Hmax, Piellou = J, Jentsch = QM)
+    
+    return(tab_final)
+    
+  } )
+  
+  # transforma-se o objeto de classe by criado em um dataframe
+  tab_indices <- data.frame(do.call(rbind, tab_indices))
+  
+  
+  # converter nomes das linhas em coluna, caso os calculos tenham sido feitos por PARCELAS
+  if( !is.na(col.parcelas) ){
+    
+    tab_indices <- cbind(aux = row.names(tab_indices), tab_indices)
+    
+    names(tab_indices)[names(tab_indices) == "aux"] <- col.parcelas
+    row.names(tab_indices) <- NULL
+  }
+  
+  
+  if (missing(indice)){
+    return(tab_indices)
+  } else if (indice == "H"){
+    return( tab_indices$Shannon )
+  } else if (indice == "S"){
+    return(tab_indices$Simpson)
+  } else if (indice == "Hmax"){
+    return(tab_indices$EqMaxima)
+  } else if (indice == "J"){
+    return(tab_indices$Piellou)
+  } else if (indice == "QM"){  
+    return(tab_indices$Jentsch)
+  } else {
+    return(tab_indices)
+  }
+}
+
+m.similaridade = function(data, col.especies, col.comparison, rotulo.NI = "NI", indice = "both"){
+  
+  # Remover NA
+  data = data[!is.na(data[col.especies]),]
+  data = data[!is.na(data[col.comparison]),]
+  
+  # converter rotulos NI (aplicativo)
+  if(is.null(rotulo.NI)){rotulo.NI <- "NI"}
+  
+  # Remover observações cuja espécie é desconhecida
+  # modifiquei para aceitar multiplas entradas
+  semNI = data[! data[ ,col.especies] %in% rotulo.NI,]
+  
+  compair = levels(data[,col.comparison])
+  
+  SO = matrix(1, nrow = length(compair), ncol = length(compair))
+  SJ = matrix(1, nrow = length(compair), ncol = length(compair))
+  for (p in seq(1, length(compair)-1,1)){
+    for (r in seq(p+1, length(compair),1)){
+      # Encontrar o número de espéciue que ocorrem na parcela
+      a = length(unique(semNI[semNI[,col.comparison] == compair[p], col.especies]))
+      
+      b = length(unique(semNI[semNI[,col.comparison] == compair[r], col.especies]))
+      
+      c = length(intersect(unique(semNI[semNI[,col.comparison] == compair[p], col.especies]),
+                           unique(semNI[semNI[,col.comparison] == compair[r], col.especies])))
+      
+      SJ[p, r] = round(c / (a+b-c), 2)
+      SJ[r, p] = round(c / (a+b-c), 2)
+      
+      SO[p, r] = round(2 * c / (a+b), 2)
+      SO[r, p] = round(2 * c / (a+b), 2)
+    }
+  }
+  if(indice == "both"){
+    
+    return(list(SJ, SO))
+    
+  } else if (indice == "Sorensen"){
+    
+    return(SO)
+    
+  } else if (indice == "Jaccard"){
+    
+    return(SJ)
+    
+  } else {
+    
+    return(list(SJ, SO))
+    
+  }
+}
+
+p.similaridade = function(x, y, rotuloNI = "NI", indice = "both"){
+  
+  # converter rotulos NI (aplicativo)
+  if(is.null(rotuloNI)){rotuloNI <- "NI"}
+  
+  # Remover observações cuja espécie é desconhecida
+  # modifiquei para aceitar multiplas entradas
+  semNI1 = x[! x %in% rotuloNI]
+  semNI1 = x[!is.na(x)]
+  
+  # Encontrar o número de espéciue que ocorrem na parcela
+  a = length(unique(semNI1))
+  
+  # modifiquei para aceitar multiplas entradas
+  semNI2 = y[! y %in% rotuloNI]
+  
+  b = length(unique(semNI2))
+  
+  c = length(intersect(unique(semNI1), unique(semNI2)))
+  
+  SJ = round(c / (a+b-c), 2)
+  
+  SO = round(2*c/(a+b), 2)
+  
+  if(indice == "both"){
+    
+    return(c(SJ, SO))
+    
+  } else if (indice == "Sorensen"){
+    
+    return(SO)
+    
+  } else if (indice == "Jaccard"){
+    
+    return(SJ)
+    
+  } else {
+    
+    return(c(SJ, SO))
+  }
+}
+
 agregacao = function(data, col.especies, col.parcelas, rotulo.NI = "NI"){
   SPECIES = col.especies
   PLOTS = col.parcelas
@@ -25,8 +222,12 @@ agregacao = function(data, col.especies, col.parcelas, rotulo.NI = "NI"){
   # Remover NA
   data = data[!is.na(data[SPECIES]),]
   
+  # converter rotulos NI (aplicativo)
+  if(is.null(NI)){NI <- "NI"}
+  
   # Remover NI
-  data = data[data[SPECIES] != NI,]
+  # modifiquei para aceitar multiplas entradas
+  data = data[! data[,SPECIES] %in% NI,]
   espList = levels(factor(data[,SPECIES]))
   
   # Constroi tabela de frequencia
@@ -98,7 +299,6 @@ estrutura = function(data, col.especies, col.dap, col.parcelas, area.parcela, es
   # alterei aqui para areaplot poder ser uma coluna do data frame
   if(is.numeric(area.parcela) ){AREA.PLOT = area.parcela}else(AREA.PLOT = mean(data[,area.parcela],na.rm = T ) )
   
-  
   # Coloquei estes dois if statements, para que o usuario possa deixar
   # de preencher a variavel, e a funcao continue rodando
   # (adicionei o "" por causa do app)
@@ -112,6 +312,9 @@ estrutura = function(data, col.especies, col.dap, col.parcelas, area.parcela, es
   VERTICAL = est.vertical
   INTERNA = est.interno
   NI = nao.identificada
+  
+  # converter rotulos NI (aplicativo)
+  if(is.null(NI)){NI <- "NI"}
   
   # Ajustar formato categórico
   
@@ -134,7 +337,8 @@ estrutura = function(data, col.especies, col.dap, col.parcelas, area.parcela, es
   data = data[!is.na(data[DBH]),]
   
   # Remover NI
-  data = data[data[SPECIES] != NI,]
+  # modifiquei para aceitar multiplas entradas
+  data = data[!data[,SPECIES] %in% NI,]
   espList = levels(factor(data[,SPECIES]))
   
   # Constroi tabela de frequencia
@@ -330,153 +534,8 @@ bdq.meyer = function(data, col.parcelas, col.dap, area.parcela, intervalo.classe
   return(result)
 }
 
-p.similaridade=function(x, y, rotuloNI = "NI", indice = "both"){
-  
-  # Remover observações cuja espécie é desconhecida
-  semNI1 = x[x != rotuloNI]
-  semNI1 = x[!is.na(x)]
-  
-  # Encontrar o número de espéciue que ocorrem na parcela
-  a = length(unique(semNI1))
-  
-  semNI2 = y[y != rotuloNI]
-  
-  b = length(unique(semNI2))
-  
-  c = length(intersect(unique(semNI1), unique(semNI2)))
-  
-  SJ = round(c / (a+b-c), 2)
-  
-  SO = round(2*c/(a+b), 2)
-  
-  if(indice == "both"){
-    
-    return(c(SJ, SO))
-    
-  } else if (indice == "Sorensen"){
-    
-    return(SO)
-    
-  } else if (indice == "Jaccard"){
-    
-    return(SJ)
-    
-  } else {
-    
-    return(c(SJ, SO))
-  }
-}
-
-m.similaridade=function(data, col.especies, col.comparison, rotulo.NI = "NI", indice = "both"){
-  
-  # Remover NA
-  data = data[!is.na(data[col.especies]),]
-  data = data[!is.na(data[col.comparison]),]
-  
-  # Remover observações cuja espécie é desconhecida
-  semNI = data[data[ ,col.especies] != rotulo.NI,]
-  
-  compair = levels(data[,col.comparison])
-  
-  SO = matrix(1, nrow = length(compair), ncol = length(compair))
-  SJ = matrix(1, nrow = length(compair), ncol = length(compair))
-  for (p in seq(1, length(compair)-1,1)){
-    for (r in seq(p+1, length(compair),1)){
-      # Encontrar o número de espéciue que ocorrem na parcela
-      a = length(unique(semNI[semNI[,col.comparison] == compair[p], col.especies]))
-      
-      b = length(unique(semNI[semNI[,col.comparison] == compair[r], col.especies]))
-      
-      c = length(intersect(unique(semNI[semNI[,col.comparison] == compair[p], col.especies]),
-                           unique(semNI[semNI[,col.comparison] == compair[r], col.especies])))
-      
-      SJ[p, r] = round(c / (a+b-c), 2)
-      SJ[r, p] = round(c / (a+b-c), 2)
-      
-      SO[p, r] = round(2 * c / (a+b), 2)
-      SO[r, p] = round(2 * c / (a+b), 2)
-    }
-  }
-  if(indice == "both"){
-    
-    return(list(SJ, SO))
-    
-  } else if (indice == "Sorensen"){
-    
-    return(SO)
-    
-  } else if (indice == "Jaccard"){
-    
-    return(SJ)
-    
-  } else {
-    
-    return(list(SJ, SO))
-    
-  }
-}
-
-diversidade = function(data, col.especies, rotulo.NI = "NI", indice = NA){
-  
-  # Remover NA
-  data = data[!is.na(data[col.especies]),]
-  
-  # Remover NI
-  semNI = data[data[,col.especies]!=rotulo.NI, col.especies]
-  
-  # Calcula tabela de frequencia
-  tableFreq = table(semNI)
-  tableP = data.frame(tableFreq)
-  names(tableP) = c("especie", "freq")
-  
-  # Calcula número de indivíduos na amostra
-  #N = length(semNI)
-  N = sum(tableP$freq)
-  
-  # Calcula a proporção de cada espécie
-  tableP$p = tableP$freq / N
-  
-  # Calcula o log da proporção de cada espécie
-  tableP$lnp = log(tableP$p)
-  tableP[tableP$lnp  == "-Inf", "lnp"] = 0
-  
-  # Número de espécies amostradas
-  Sesp = length(tableP[tableP$freq > 0, "especie"])
-  
-  # Calcula Shannon
-  H = round(- sum(tableP$p * tableP$lnp), 2)
-  
-  #Calcula Simpson
-  S = round(1 - (sum(tableP$freq*(tableP$freq - 1))/(N*(N-1))), 2)
-  
-  # Diversidade Máxima
-  Hmax = round(log(length(tableP$freq[tableP$freq>0])), 2)
-  
-  # Equabilidade de Pielou
-  J = round(H / Hmax, 2)
-  
-  # Coeficiente de mistura de Jentsch
-  QM = round(Sesp / N, 2)
-  
-  if (is.na(indice)){
-    return(data.frame(Shannon = H, Simpson = S, EqMaxima = Hmax, Piellou = J, Jentsch = QM))
-  } else if (indice == "H"){
-    return(H)
-  } else if (indice == "S"){
-    return(S)
-  } else if (indice == "Hmax"){
-    return(Hmax)
-  } else if (indice == "J"){
-    return(J)
-  } else if (indice == "QM"){  
-    return(QM)
-  } else {
-    return(data.frame(Shannon = H, Simpson = S, EqMaxima = Hmax, Piellou = J, Jentsch = QM))
-  }
-}
-
-
 # Funcoes Inventario ####
+
 round_df <- function(x, digits) {
   # round all numeric variables
   # x: data frame 
@@ -1178,9 +1237,10 @@ shinyServer(function(input, output, session) {
       dados <- rawData()
       
       x <- diversidade(data             = dados, 
-                       col.especies     = input$col.especiesdiv,
-                       rotulo.NI        = input$rotutuloNIdiv  ) %>% 
-        gather("Índice", "Resultado") # transpor tabela
+                       col.especies     = input$col.especiesdiv, 
+                       col.parcelas     = input$col.parcelasdiv, 
+                       rotulo.NI        = input$rotutuloNIdiv  ) # %>% 
+        #gather("Índice", "Resultado") # transpor tabela
       
       x 
     }
@@ -1191,38 +1251,51 @@ shinyServer(function(input, output, session) {
   output$selec_especiesdiv <- renderUI({
     
     data <- rawData()
-    
-    selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
-      "col.especiesdiv", # Id
-      "Selecione a coluna de espécies:", # nome que sera mostrado na UI
-      choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
-      selected = especies_names,     
-      options = list(
-        placeholder = 'selecione uma coluna abaixo'#,
-        #onInitialize = I('function() { this.setValue(""); }')
-      ) # options    
-    )
-    
+
+      selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
+        "col.especiesdiv", # Id
+        "Selecione a coluna de espécies:", # nome que sera mostrado na UI
+        choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
+        selected = especies_names,     
+        options = list(
+          placeholder = 'selecione uma coluna abaixo'#,
+          #onInitialize = I('function() { this.setValue(""); }')
+        ) # options    
+      ) # selctize
+
   })
   
   output$selec_rotuloNIdiv <- renderUI({
     
-    dados <- rawData()
+    if(is.null(input$col.especiesdiv)){return(NULL)}
     
-    switch(input$CBdiv,
-           "Manualmente" = textInput("rotutuloNIdiv", 
-                                     label = "Código de indivíduo não indentificado:", 
-                                     value = "NI"),
-           
-           "lista de especies" = selectizeInput("rotutuloNIdiv",
-                                                label = "Código de indivíduo não indentificado:",
-                                                choices = levels(as.factor(dados[,input$col.especiesdiv])),
-                                                options = list(
-                                                  placeholder = 'Selecione uma espécie abaixo',
-                                                  onInitialize = I('function() { this.setValue(""); }')
-                                                ) # options    
-           )# selectize
-    )
+    data <- rawData()
+    
+    selectizeInput("rotutuloNIdiv",
+                   label = "Selecione o(s) código(s) de indivíduo(s) não indentificado(s):",
+                   choices = levels(as.factor(data[,input$col.especiesdiv])),
+                   multiple = TRUE,
+                   options = list(
+                     placeholder = 'Selecione um ou mais rótulos abaixo',
+                     onInitialize = I('function() { this.setValue(""); }')
+                   ) )
+
+  })
+  
+  output$selec_parcelasdiv <- renderUI({
+    
+    data <- rawData()
+
+    selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
+      "col.parcelasdiv", # Id
+      "Selecione a coluna de parcelas:", # nome que sera mostrado na UI
+      choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
+      #selected = parcelas_names,     
+      options = list(
+        placeholder = 'selecione uma coluna abaixo',
+        onInitialize = I('function() { this.setValue(""); }')
+      ) # options    
+    ) # selctize
     
     
   })
@@ -1327,26 +1400,19 @@ shinyServer(function(input, output, session) {
   
   output$selec_rotuloNImsim <- renderUI({
     
-    dados <- rawData()
-    
-    switch(input$CBmsim,
-           "Manualmente" = textInput("rotutuloNImsim", 
-                                     label = "Código de indivíduo não indentificado:", 
-                                     value = "NI"),
-           
-           "lista de especies" = selectizeInput("rotutuloNImsim",
-                                                label = "Código de indivíduo não indentificado:",
-                                                choices = levels(
-                                                  as.factor(
-                                                    dados[,input$col.especiesmsim])),
-                                                options = list(
-                                                  placeholder = 'Selecione uma espécie abaixo',
-                                                  onInitialize = I('function() { this.setValue(""); }')
-                                                ) # options    
-           )# selectize
-    )
-    
-    
+    if(is.null(input$col.especiesmsim)){return(NULL)}
+
+    data <- rawData()
+
+    selectizeInput("rotutuloNImsim",
+                   label = "Selecione o(s) código(s) de indivíduo(s) não indentificado(s):",
+                   choices = levels(as.factor(data[,input$col.especiesmsim])),
+                   multiple = TRUE,
+                   options = list(
+                     placeholder = 'Selecione um ou mais rótulos abaixo',
+                     onInitialize = I('function() { this.setValue(""); }')
+                   ) )
+
   })
   
   output$rb_slider_graphmsim1 <- renderUI({
@@ -1630,24 +1696,18 @@ shinyServer(function(input, output, session) {
   
   output$selec_rotuloNIpsim <- renderUI({
     
-    dados <- rawData()
+    if(is.null(input$col.especiespsim)){return(NULL)}
     
-    switch(input$CBpsim,
-           "Manualmente" = textInput("rotutuloNIpsim", 
-                                     label = "Código de indivíduo não indentificado:", 
-                                     value = "NI"),
-           
-           "lista de especies" = selectizeInput("rotutuloNIpsim",
-                                                label = "Código de indivíduo não indentificado:",
-                                                choices = levels(
-                                                  as.factor(
-                                                    dados[,input$col.especiespsim])),
-                                                options = list(
-                                                  placeholder = 'Selecione uma espécie abaixo',
-                                                  onInitialize = I('function() { this.setValue(""); }')
-                                                ) # options    
-           )# selectize
-    )
+    data <- rawData()
+    
+    selectizeInput("rotutuloNIpsim",
+                   label = "Selecione o(s) código(s) de indivíduo(s) não indentificado(s):",
+                   choices = levels(as.factor(data[,input$col.especiespsim])),
+                   multiple = TRUE,
+                   options = list(
+                     placeholder = 'Selecione um ou mais rótulos abaixo',
+                     onInitialize = I('function() { this.setValue(""); }')
+                   ) )
     
     
   })
@@ -1727,25 +1787,20 @@ shinyServer(function(input, output, session) {
   })
   
   output$selec_rotuloNIagreg <- renderUI({
+
+    if(is.null(input$col.especiesagreg)){return(NULL)}
     
-    dados <- rawData()
+    data <- rawData()
     
-    switch(input$CBagreg,
-           "Manualmente" = textInput("rotutuloNIagreg", 
-                                   label = "Código de indivíduo não indentificado:", 
-                                   value = "NI"),
-           
-           "lista de especies" = selectizeInput("rotutuloNIagreg",
-                                                label = "Código de indivíduo não indentificado:",
-                                                choices = levels(as.factor(dados[,input$col.especiesagreg])),
-                                                options = list(
-                                                  placeholder = 'Selecione uma espécie abaixo',
-                                                  onInitialize = I('function() { this.setValue(""); }')
-                                                ) # options    
-                                                )# selectize
-           )
-    
-    
+    selectizeInput("rotutuloNIagreg",
+                   label = "Selecione o(s) código(s) de indivíduo(s) não indentificado(s):",
+                   choices = levels(as.factor(data[,input$col.especiesagreg])),
+                   multiple = TRUE,
+                   options = list(
+                     placeholder = 'Selecione um ou mais rótulos abaixo',
+                     onInitialize = I('function() { this.setValue(""); }')
+                   ) )
+
   })
   
   output$agreg <- renderDataTable({
@@ -1861,24 +1916,19 @@ shinyServer(function(input, output, session) {
   })
   
   output$selec_rotuloNIestr <- renderUI({
+
+    if(is.null(input$col.especiesestr)){return(NULL)}
     
-    dados <- rawData()
+    data <- rawData()
     
-    switch(input$CBestr,
-           "Manualmente" = textInput("rotutuloNIestr", 
-                                     label = "Código de indivíduo não indentificado:", 
-                                     value = "NI"),
-           
-           "lista de especies" = selectizeInput("rotutuloNIestr",
-                                                label = "Código de indivíduo não indentificado:",
-                                                choices = levels(as.factor(dados[,input$col.especiesestr])),
-                                                options = list(
-                                                  placeholder = 'Selecione uma espécie abaixo',
-                                                  onInitialize = I('function() { this.setValue(""); }')
-                                                ) # options    
-           )# selectize
-    )
-    
+    selectizeInput("rotutuloNIestr",
+                   label = "Selecione o(s) código(s) de indivíduo(s) não indentificado(s):",
+                   choices = levels(as.factor(data[,input$col.especiesestr])),
+                   multiple = TRUE,
+                   options = list(
+                     placeholder = 'Selecione um ou mais rótulos abaixo',
+                     onInitialize = I('function() { this.setValue(""); }')
+                   ) )
     
   })
   

@@ -65,14 +65,11 @@ shinyUI(
                                      
                                      uiOutput("selec_especiesdiv"),
                                      
-                                     h4("Rotular espécies não identificadas:"),
-                                     
-                                     radioButtons("CBdiv",
-                                                  "Escolher rótulo da lista de especies, ou inserir manualmente?",
-                                                  c("lista de especies", "Manualmente"),
-                                                  "Manualmente"),
-                                     
                                      uiOutput("selec_rotuloNIdiv"),
+                                     
+                                     h4("Variável opcional: calcular índices por pivot"),
+                                     
+                                     uiOutput("selec_parcelasdiv"),
                                      
                                      actionButton( # botao que o usuario clica, e gera uma acao no server
                                        "Loaddiv", # Id
@@ -81,7 +78,7 @@ shinyUI(
                                      
                                    ), # sidebar Panel
                                    mainPanel(
-                                     DT::dataTableOutput("div", "70%")
+                                     DT::dataTableOutput("div")
                                    ) # main Panel
                                    
                                  )# Sidebar layout
@@ -106,13 +103,6 @@ shinyUI(
                                      uiOutput("selec_especiesmsim"),
                                      
                                      uiOutput("selec_parcelasmsim"),
-                                     
-                                     h4("Rotular espécies não identificadas:"),
-                                     
-                                     selectizeInput("CBmsim",
-                                                    "Escolher rótulo da lista de especies, ou inserir manualmente?",
-                                                    c("lista de especies", "Manualmente"),
-                                                    "Manualmente"),
                                      
                                      uiOutput("selec_rotuloNImsim"),
                                      
@@ -154,14 +144,6 @@ shinyUI(
                                      
                                      uiOutput("selec_psimselec_parc2"),
                                      
-                                     
-                                     h4("Rotular espécies não identificadas:"),
-                                     
-                                     selectizeInput("CBpsim",
-                                                    "Escolher rótulo da lista de especies, ou inserir manualmente?",
-                                                    c("lista de especies", "Manualmente"),
-                                                    "Manualmente"),
-                                     
                                      uiOutput("selec_rotuloNIpsim"),
                                      
                                      actionButton( # botao que o usuario clica, e gera uma acao no server
@@ -188,13 +170,6 @@ shinyUI(
                                      uiOutput("selec_especiesagreg"),
                                      
                                      uiOutput("selec_parcelasagreg"),
-                                     
-                                     h4("Rotular espécies não identificadas:"),
-                                     
-                                     radioButtons("CBagreg",
-                                                  "Escolher rótulo da lista de especies, ou inserir manualmente?",
-                                                  c("lista de especies", "Manualmente"),
-                                                  "Manualmente"),
                                      
                                      uiOutput("selec_rotuloNIagreg"),
                                      
@@ -231,16 +206,9 @@ shinyUI(
                        
                        uiOutput("selec_area.parcelaestr"),
                        
-                       h4("Rotular espécies não identificadas:"),
-                       
-                       radioButtons("CBestr",
-                                    "Escolher rótulo da lista de especies, ou inserir manualmente?",
-                                    c("lista de especies", "Manualmente"),
-                                    "Manualmente"),
-                       
                        uiOutput("selec_rotuloNIestr"),
                        
-                       h3("Variaveis opcionais:"),
+                       h4("Variáveis opcionais:"),
                        
                        uiOutput("selec_est.verticalestr"),
                        
