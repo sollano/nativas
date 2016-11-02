@@ -1112,10 +1112,8 @@ estratos_names <- c("TALHAO", "Talhao", "talhao","COD_TALHAO","Cod_Talhao","cod_
 
 shinyServer(function(input, output, session) {
   
-
   # Importar os dados ####
 
-  
   output$upload <- renderUI({
     
     validate(need(input$df_select == "Fazer o upload", "" )  )
@@ -1195,7 +1193,8 @@ shinyServer(function(input, output, session) {
     
   })
   
-  rawData <- reactive({
+  # rawData_ (com traco) sera o dado bruto sem filtro
+  rawData_ <- reactive({
     
     
     
@@ -1208,7 +1207,7 @@ shinyServer(function(input, output, session) {
   output$rawdata <- renderDataTable({ # renderizamos uma DT::DataTable
     
     # salvamos a funcao newData, que contem o arquivo carregado pelo usuario em um objeto
-    data <- rawData() 
+    data <- rawData_() 
     
     datatable(data,
               
@@ -1224,7 +1223,112 @@ shinyServer(function(input, output, session) {
     # aperte o botao input$columns
     
   })
+
+  # Filtrar dados ####
   
+  # rawData (sem traco) sera o dado bruto com filtro, caso o usuario
+  # rode algum filtro, caso contrario sera o dado bruto inalterado
+  rawData <- reactive({
+    
+    data <- rawData_()
+    
+    if(input$Loadfiltrar){
+      
+      data <- data %>% 
+        filter_(interp( ~ ! var %in% input$filtrar_dados_col1_filtro, var = as.name(input$filtrar_dados_col1) )   )
+      
+      data[, input$filtrar_dados_rm_cols] <- NULL
+      
+      data
+      
+    }else{
+      
+      data
+      
+    }
+  })
+  
+  output$filtrar_dados_col1_ui <- renderUI({
+    
+    data <- rawData_()
+    
+    selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
+      "filtrar_dados_col1", # Id
+      "Selecione a coluna que se deseja filtrar:", # nome que sera mostrado na UI
+      choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
+      options = list(
+        placeholder = 'selecione uma coluna abaixo',
+        onInitialize = I('function() { this.setValue(""); }')
+      ) # options    
+    ) # selctize
+    
+    
+  })
+  
+  output$filtrar_dados_col1_filtro_ui <- renderUI({
+    
+    if( is.null(input$filtrar_dados_col1) || input$filtrar_dados_col1 =="" ){
+      
+      opcoes <- NULL
+      
+      }else{
+    
+    data <- rawData_()
+    
+    opcoes <- levels(
+      as.factor(
+        data[,input$filtrar_dados_col1]))
+      }
+    
+    selectizeInput("filtrar_dados_col1_filtro",
+                   label = "Selecione o(s) nivel(s) que se deseja remover:",
+                   choices = opcoes,
+                   multiple = TRUE,
+                   options = list(
+                     placeholder = 'Selecione o(s) nivel(s) abaixo',
+                     onInitialize = I('function() { this.setValue(""); }')
+                   ) # options    
+    )
+    
+    
+    
+  })
+  
+  output$filtrar_dados_rm_cols_ui <- renderUI({
+    
+    data <- rawData_()
+    
+    selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
+      "filtrar_dados_rm_cols", # Id
+      "Selecione a(s) coluna(s) que se deseja remover:", # nome que sera mostrado na UI
+      choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
+      multiple = TRUE,
+      options = list(
+        placeholder = 'selecione uma coluna abaixo',
+        onInitialize = I('function() { this.setValue(" "); }')
+      ) # options    
+    ) # selctize
+    
+    
+  })
+  
+  output$filter_table <- renderDataTable({
+    
+    data <- rawData()
+    
+    datatable(data,
+              
+              options = list(
+                initComplete = JS(
+                  "function(settings, json) {",
+                  "$(this.api().table().header()).css({'background-color': '#00a90a', 'color': '#fff'});",
+                  "}")
+              )
+    ) # Criamos uma DT::datatable com base no objeto
+    
+    
+  })
+
   # Índices de diversidade ####
   
   # funcao diversidade
@@ -1652,15 +1756,29 @@ shinyServer(function(input, output, session) {
     
   })
   
+  # cria lista com os nomes das parcelas
+  lista_parcelas_psim <- reactive({
+    
+    if(is.null(input$col.parcelaspsim) || is.null(rawData()) ){return()}
+
+    data <- rawData()
+    
+    parcelas <- unique(
+      as.character(
+        data[,input$col.parcelaspsim]))
+    
+    parcelas
+    
+  })
+  
   output$selec_psimselec_parc1 <- renderUI({
     
     if(is.null(input$col.parcelaspsim) || is.null(rawData()) ){return()}
     
-    dados <- rawData()
+    data <- rawData()
     
-    parcelas <- levels(
-      as.factor(
-        dados[,input$col.parcelaspsim]))
+    parcelas <- lista_parcelas_psim()
+
     
     selectizeInput("psimselec_parc1",
                    label = "Selecione a Parcela 1:",
@@ -1677,11 +1795,9 @@ shinyServer(function(input, output, session) {
     
     if(is.null(input$col.parcelaspsim) || is.null(rawData()) ){return()}
     
-    dados <- rawData()
+    data <- rawData()
     
-    parcelas <- levels(
-      as.factor(
-        dados[,input$col.parcelaspsim]))
+    parcelas <- lista_parcelas_psim()
     
     selectizeInput("psimselec_parc2",
                    label = "Selecione a Parcela 2:",
@@ -2947,14 +3063,15 @@ shinyServer(function(input, output, session) {
   
   datasetInput <- reactive({
     switch(input$dataset,
-           "Agregar"                           = tabagregate(),
+           "Dado utilizado / filtrado"         = rawData(),
+           "Indice diversidade"                = tabdiversidade(),
+           "Matriz similaridade - Jaccard"     = tabmsimilaridade1(),
+           "Matriz similaridade - Sorensen"    = tabmsimilaridade2(),
+           "Pareado similaridade"              = tabpsimilaridade(),
+           "Indice de agregacao"               = tabagregate(),
            "Estrutura"                         = tabestrutura(),
-           "Diversidade"                       = tabdiversidade(),
            "BDq Meyer"                         = tabBDq1(),
            "BDq Meyer - Coeficientes"          = tabBDq3(),
-           "Matriz Similaridade - Jaccard"     = tabmsimilaridade1(),
-           "Matriz Similaridade - Sorensen"    = tabmsimilaridade2(),
-           "Pareado Similaridade"              = tabpsimilaridade(),
            "Amostragem Casual Simples"         = tabacs(),
            "Amostragem Casual Estratificada 1" = tabace2(),
            "Amostragem Casual Estratificada 2" = tabace1(),
@@ -2968,7 +3085,7 @@ shinyServer(function(input, output, session) {
     
     datatable( datadownload,
                options = list(searching = FALSE,
-                              paging=FALSE,
+                              paging=T,
                               initComplete = JS(
                                 "function(settings, json) {",
                                 "$(this.api().table().header()).css({'background-color': '#00a90a', 'color': '#fff'});",
@@ -2994,7 +3111,7 @@ shinyServer(function(input, output, session) {
     content = function(file) {
       if(input$datasetformat==".csv")
       {
-        write.csv(datasetInput(), file, row.names = F)
+        write.csv2(datasetInput(), file, row.names = F)
       }
       else if(input$datasetformat==".xlsx")
       {

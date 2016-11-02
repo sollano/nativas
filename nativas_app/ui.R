@@ -49,7 +49,28 @@ shinyUI(
                         ) # mainPanel
                       ) # sidebarLayout
              ), # tabPanel Upload  de dados
-             
+             tabPanel("Filtrar dados",
+                      
+                      sidebarPanel(
+                        
+                        h3("Filtrar dados"),
+                        
+                        uiOutput("filtrar_dados_col1_ui"),
+                        uiOutput("filtrar_dados_col1_filtro_ui"),
+                        uiOutput("filtrar_dados_rm_cols_ui"),
+                        
+                        actionButton( # botao que o usuario clica, e gera uma acao no server
+                          "Loadfiltrar", # Id
+                          "Filtrar")
+                        
+                        
+                      ),# sidebarPanel
+                      
+                      mainPanel(DT::dataTableOutput("filter_table"))# mainPanel
+               
+               
+               
+             ), # tabPanel filtrar dados
              # NavbarMenu Indices ####
              
              navbarMenu("Índices",
@@ -67,7 +88,7 @@ shinyUI(
                                      
                                      uiOutput("selec_rotuloNIdiv"),
                                      
-                                     h4("Variável opcional: calcular índices por pivot"),
+                                     h4("Variável opcional: calcular índices por parcela"),
                                      
                                      uiOutput("selec_parcelasdiv"),
                                      
@@ -460,14 +481,15 @@ shinyUI(
                                   
                                   selectInput("dataset", "Escolha uma tabela:", 
                                               choices = c(
-                                                "Agregar",
+                                                "Dado utilizado / filtrado",
+                                                "Indice diversidade",
+                                                "Matriz similaridade - Jaccard",
+                                                "Matriz similaridade - Sorensen",
+                                                "Pareado similaridade",
+                                                "Indice de agregacao",
                                                 "Estrutura",
-                                                "Diversidade",
                                                 "BDq Meyer",
                                                 "BDq Meyer - Coeficientes",
-                                                "Matriz Similaridade - Jaccard",
-                                                "Matriz Similaridade - Sorensen",
-                                                "Pareado Similaridade",
                                                 "Amostragem Casual Simples", 
                                                 "Amostragem Casual Estratificada 1", 
                                                 "Amostragem Casual Estratificada 2",
