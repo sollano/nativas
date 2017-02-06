@@ -1,0 +1,28 @@
+---
+title: "dendrograma teste"
+output: pdf_document
+---
+
+
+
+```{r}
+
+library(ggplot2)
+library(ggdendro)
+
+source("D:/Documents/Trabalhos_Mensuracao/nativas/matrizSimilaridade.R")
+
+inv <- read.csv("D:/Documents/Trabalhos_Mensuracao/nativas/cauaxi_parc10000m2.csv")
+
+ms1 <- as.data.frame(m.similaridade(inv, "nome.cient", "transecto")[[1]])
+
+# coloquei as parcelas como nome da matriz de similaridade,
+# para que as parcelas apareçam no dendrograma
+names(ms1) <- levels( inv[,"transecto"] ) 
+
+ms1_hclust <- hclust(as.dist(ms1) ) #?
+
+ggdendrogram(ms1_hclust)
+
+```
+

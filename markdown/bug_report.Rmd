@@ -1,0 +1,27 @@
+---
+title: "bug report"
+author: "Sollano R. Braga"
+date: "17 de setembro de 2016"
+output: pdf_document
+---
+
+Eric, encontrei um bug na função BDq. Da uma olhada:
+
+```{r, error=T}
+source("D:/Documents/Trabalhos_Mensuracao/nativas/Bdq.R")
+inv <- read.csv("D:/Documents/Trabalhos_Mensuracao/nativas/cauaxi_parc10000m2.csv")
+
+# funciona
+bdq.meyer(inv, "transecto", "dap", 1000)[[1]]
+
+# nao funciona
+bdq.meyer(inv, "transecto", "dap", 10000)[[1]]
+# nao funciona
+bdq.meyer(inv, "transecto", "dap", "trans.area")[[1]]
+```
+
+Se a area da parcela for 10000, a função gera um erro.
+
+O erro parece ocorrer na hora que é feito um ajuste de modelo linear na função. Pode ser porque a área da parcela é um hectare, e na hora de fazer a divisão está ocorrendo algum erro.
+
+Geralmente quando eu encontro esse erro (NaN) em um ajuste, é porque existe 0 no dado. Mas temos que verificar com calma depois!

@@ -9,6 +9,7 @@ library(lazyeval)
 library(ggplot2)
 library(ggdendro)
 library(ggthemes)
+library(plotly)
 library(xlsx)
 library(xlsxjars)
 library(markdown)
@@ -2245,17 +2246,18 @@ shinyServer(function(input, output, session) {
       data <- tabBDq1()
       
       graph_bdq <- data %>% 
-        select("x"                       = CentroClasse, 
+        select("classe_de_diametro"      = CentroClasse, 
                "Distribuição observada"  = IndvHectare , 
                "Distribuição balanceada" = MeyerBalan  ) %>% 
-        gather(class, y, -x, factor_key = T) %>% 
-        arrange(x) %>% 
-        mutate(x = as.factor(x) )
+        gather(class, num_indv_ha, -classe_de_diametro, factor_key = T) %>% 
+        arrange(classe_de_diametro) %>% 
+        mutate(classe_de_diametro = as.factor(classe_de_diametro) )
       
-      g <-  ggplot(graph_bdq, aes(x = x, y = y) ) + 
+      g <-  ggplot(graph_bdq, aes(x = classe_de_diametro, y = num_indv_ha) ) + 
         geom_bar(aes(fill = class), stat = "identity",position = "dodge") +
         labs(x = "Classe de diâmetro (cm)", y = "Número de indivíduos (ha)", fill = NULL) + 
         scale_fill_manual(values =c("#108e00", "cyan3","firebrick2") ) +
+        theme(legend.position="bottom") +
         theme_hc(base_size = 14) 
       #theme_igray(base_size = 14)
       
@@ -2265,11 +2267,11 @@ shinyServer(function(input, output, session) {
     
   })
 
-  output$BDq_graph_ <- renderPlot({
+  output$BDq_graph_ <- plotly::renderPlotly({
     
    g <- BDq_graph()
    
-   g 
+   plotly::ggplotly(g) 
    
   })
   
