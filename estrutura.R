@@ -5,7 +5,6 @@ estrutura = function(data, col.especies, col.dap, col.parcelas, area.parcela, es
     # alterei aqui para areaplot poder ser uma coluna do data frame
     if(is.numeric(area.parcela) ){AREA.PLOT = area.parcela}else(AREA.PLOT = mean(data[,area.parcela],na.rm = T ) )
     
-    
     # Coloquei estes dois if statements, para que o usuario possa deixar
     # de preencher a variavel, e a funcao continue rodando
     # (adicionei o "" por causa do app)
@@ -19,6 +18,13 @@ estrutura = function(data, col.especies, col.dap, col.parcelas, area.parcela, es
     VERTICAL = est.vertical
     INTERNA = est.interno
     NI = nao.identificada
+    
+    # Converter variaveis categoricas em fatores
+    data[,PLOTS] <- as.factor(data[,PLOTS])
+    data[,SPECIES] <- as.factor(data[,SPECIES])
+    
+    # converter rotulos NI (aplicativo)
+    if(is.null(NI)){NI <- "NI"}
     
     # Ajustar formato categórico
     
@@ -41,7 +47,8 @@ estrutura = function(data, col.especies, col.dap, col.parcelas, area.parcela, es
     data = data[!is.na(data[DBH]),]
     
     # Remover NI
-    data = data[data[SPECIES] != NI,]
+    # modifiquei para aceitar multiplas entradas
+    data = data[!data[,SPECIES] %in% NI,]
     espList = levels(factor(data[,SPECIES]))
     
     # Constroi tabela de frequencia
@@ -169,6 +176,3 @@ estrutura = function(data, col.especies, col.dap, col.parcelas, area.parcela, es
     rm(pivot)
     return(result)
 }    
-    
-
-    
