@@ -3,9 +3,17 @@ m.similaridade=function(data, col.especies, col.comparison, rotulo.NI = "NI", in
   # Remover NA
   data = data[!is.na(data[col.especies]),]
   data = data[!is.na(data[col.comparison]),]
-
+  
+  # converter rotulos NI (aplicativo)
+  if(is.null(rotulo.NI)){rotulo.NI <- "NI"}
+  
   # Remover observações cuja espécie é desconhecida
-  semNI = data[data[ ,col.especies] != rotulo.NI,]
+  # modifiquei para aceitar multiplas entradas
+  semNI = data[! data[ ,col.especies] %in% rotulo.NI,]
+  
+  # Converter variaveis categoricas em fatores
+  data[,col.especies] <- as.factor(data[,col.especies])
+  data[,col.comparison] <- as.factor(data[,col.comparison])
   
   compair = levels(data[,col.comparison])
   
